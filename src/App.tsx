@@ -1,65 +1,20 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
 import { useTheme } from "./ThemeContext";
-
-interface CameraProfile {
-  id: string;
-  name: string;
-  make: string;
-  model: string;
-  lens?: string;
-}
-
-interface ProcessResult {
-  file: string;
-  success: boolean;
-  error?: string;
-}
+import { DropZone, ProfileModal, Footer } from "./components";
+import { CameraProfile, ProcessResult } from "./types";
 
 function App() {
   const { theme, setTheme } = useTheme();
   const [profiles, setProfiles] = useState<CameraProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string>("");
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [showThemeDropdown, setShowThemeDropdown] = useState(false);
-  const [newProfile, setNewProfile] = useState({
-    name: "",
-    make: "",
-    model: "",
-    lens: "",
-  });
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<ProcessResult[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const themeDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadProfiles();
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowProfileDropdown(false);
-      }
-      if (
-        themeDropdownRef.current &&
-        !themeDropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowThemeDropdown(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
   }, []);
 
   const loadProfiles = async () => {
@@ -74,22 +29,11 @@ function App() {
     }
   };
 
-  const handleSaveProfile = async () => {
-    if (!newProfile.name || !newProfile.make || !newProfile.model) return;
-
-    const profile: CameraProfile = {
-      id: Date.now().toString(),
-      name: newProfile.name,
-      make: newProfile.make,
-      model: newProfile.model,
-      lens: newProfile.lens || undefined,
-    };
-
+  const handleSaveProfile = async (profile: CameraProfile) => {
     try {
       await window.electronAPI.saveProfile(profile);
       await loadProfiles();
       setSelectedProfile(profile.id);
-      setNewProfile({ name: "", make: "", model: "", lens: "" });
       setIsCreatingProfile(false);
     } catch (error) {
       console.error("Failed to save profile:", error);
@@ -176,320 +120,34 @@ function App() {
     }
   };
 
-  const getCurrentProfile = () => {
-    return profiles.find((p) => p.id === selectedProfile);
-  };
-
-  const getThemeIcon = (themeMode: string) => {
-    switch (themeMode) {
-      case 'light': return '☀️';
-      case 'dark': return '🌙';
-      case 'system': return '💻';
-      default: return '💻';
-    }
-  };
-
-  const getThemeLabel = (themeMode: string) => {
-    switch (themeMode) {
-      case 'light': return 'Light';
-      case 'dark': return 'Dark';  
-      case 'system': return 'System';
-      default: return 'System';
-    }
-  };
-
   return (
     <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
       <main className="flex-1 flex items-center justify-center p-5">
-        <div
-          className={`flex-1 bg-white dark:bg-gray-800 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 relative ${
-            isDragOver
-              ? "border-blue-500 bg-blue-50 dark:bg-blue-900 border-solid"
-              : "border-gray-300 dark:border-gray-600 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900"
-          }`}
-          style={{ maxHeight: "calc(100vh - 120px)" }}
+        <DropZone
+          isDragOver={isDragOver}
+          isProcessing={isProcessing}
+          results={results}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={handleFileSelect}
-        >
-          {isProcessing ? (
-            <div className="flex flex-col items-center gap-4 text-gray-600 dark:text-gray-300">
-              <div className="w-10 h-10 border-3 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
-              <p>Processing images...</p>
-            </div>
-          ) : results.length > 0 ? (
-            <div className="w-full max-w-2xl text-left">
-              <div className="flex flex-col gap-2 mb-4">
-                {results.map((result, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center gap-3 p-2 px-3 rounded-md text-sm ${
-                      result.success
-                        ? "bg-green-100 dark:bg-green-900 border-l-3 border-green-500"
-                        : "bg-red-100 dark:bg-red-900 border-l-3 border-red-500"
-                    }`}
-                  >
-                    <span className="text-lg">
-                      {result.success ? "✅" : "❌"}
-                    </span>
-                    <span className="font-medium flex-1 text-gray-800 dark:text-gray-200">{result.file}</span>
-                    {result.error && (
-                      <span className="text-xs text-red-500 dark:text-red-400">
-                        {result.error}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <button
-                className="bg-blue-500 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-600 transition-colors"
-                onClick={() => setResults([])}
-              >
-                Clear Results
-              </button>
-            </div>
-          ) : (
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              <div className="text-6xl mb-4 opacity-60">📷</div>
-              <p className="text-xl mb-2 dark:text-gray-300">Drop your scanned film images here</p>
-              <p className="text-base text-gray-400 dark:text-gray-500">
-                or click to select files
-              </p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
-                Supported: JPG, JPEG, TIFF
-              </p>
-            </div>
-          )}
-        </div>
+          onFileSelect={handleFileSelect}
+          onClearResults={() => setResults([])}
+        />
       </main>
 
-      <footer className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 p-3 px-4">
-        <div className="flex items-center gap-4 max-w-6xl mx-auto">
-          <button
-            className="bg-blue-500 text-white w-8 h-8 rounded-full text-lg font-bold flex items-center justify-center hover:bg-blue-600 transition-colors flex-shrink-0"
-            onClick={() => setIsCreatingProfile(true)}
-            title="Add new camera profile"
-          >
-            +
-          </button>
+      <Footer
+        profiles={profiles}
+        selectedProfile={selectedProfile}
+        onAddProfile={() => setIsCreatingProfile(true)}
+        onProfileSelect={setSelectedProfile}
+        onProfileDelete={handleDeleteProfile}
+      />
 
-          <div className="flex-1 min-w-0">
-            {getCurrentProfile() ? (
-              <>
-                <span className="block font-semibold text-gray-800 dark:text-gray-200 text-sm leading-tight">
-                  {getCurrentProfile()?.name}
-                </span>
-              </>
-            ) : (
-              <span className="text-gray-400 dark:text-gray-500 italic text-sm">
-                No camera profile selected
-              </span>
-            )}
-          </div>
-
-          <div className="relative" ref={themeDropdownRef}>
-            <button
-              className="text-gray-500 dark:text-gray-400 text-lg p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center justify-center w-8 h-8"
-              onClick={() => setShowThemeDropdown(!showThemeDropdown)}
-              title="Switch theme"
-            >
-              {getThemeIcon(theme)}
-            </button>
-
-            {showThemeDropdown && (
-              <div className="absolute bottom-full right-0 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg min-w-40 z-50">
-                <div className="px-4 py-3 font-semibold text-gray-800 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700 text-sm">
-                  Theme
-                </div>
-                {['light', 'dark', 'system'].map((themeOption) => (
-                  <div
-                    key={themeOption}
-                    className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                      theme === themeOption ? 'bg-blue-50 dark:bg-blue-900' : ''
-                    }`}
-                    onClick={() => {
-                      setTheme(themeOption as any)
-                      setShowThemeDropdown(false)
-                    }}
-                  >
-                    <span className="text-lg">{getThemeIcon(themeOption)}</span>
-                    <span className="text-sm text-gray-800 dark:text-gray-200">
-                      {getThemeLabel(themeOption)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="relative" ref={dropdownRef}>
-            <button
-              className="text-gray-500 dark:text-gray-400 text-lg p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center justify-center w-8 h-8"
-              onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-              title="Switch camera profile"
-            >
-              ⋯
-            </button>
-
-            {showProfileDropdown && (
-              <div className="absolute bottom-full right-0 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg min-w-72 max-h-72 overflow-y-auto z-50">
-                <div className="px-4 py-3 font-semibold text-gray-800 dark:text-gray-200 border-b border-gray-100 dark:border-gray-700 text-sm">
-                  Camera Profiles
-                </div>
-                {profiles.length === 0 ? (
-                  <div className="px-4 py-4 text-gray-400 dark:text-gray-500 text-center italic text-sm">
-                    No profiles created yet
-                  </div>
-                ) : (
-                  <>
-                    {profiles.map((profile) => (
-                      <div
-                        key={profile.id}
-                        className={`flex items-center justify-between px-4 py-3 cursor-pointer transition-colors gap-3 group hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                          profile.id === selectedProfile ? "bg-blue-50 dark:bg-blue-900" : ""
-                        }`}
-                        onClick={() => {
-                          setSelectedProfile(profile.id);
-                          setShowProfileDropdown(false);
-                        }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span className="block font-medium text-gray-800 dark:text-gray-200 text-sm">
-                            {profile.name}
-                          </span>
-                          <span className="block text-gray-500 dark:text-gray-400 text-xs mt-0.5 truncate">
-                            {profile.make} {profile.model}
-                            {profile.lens && ` • ${profile.lens}`}
-                          </span>
-                        </div>
-                        <button
-                          className="text-gray-400 dark:text-gray-500 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900 hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm opacity-0 group-hover:opacity-100"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteProfile(profile.id);
-                          }}
-                          title="Delete profile"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </footer>
-
-      {isCreatingProfile && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={() => setIsCreatingProfile(false)}
-        >
-          <div
-            className="bg-white dark:bg-gray-800 rounded-xl w-[90%] max-w-lg shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center p-5 px-6 border-b border-gray-100 dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                Add Camera Profile
-              </h2>
-              <button
-                className="text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded w-7 h-7 flex items-center justify-center text-lg"
-                onClick={() => setIsCreatingProfile(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-6">
-              <div className="mb-5">
-                <label className="block mb-1.5 font-medium text-gray-700 dark:text-gray-300 text-sm">
-                  Profile Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Nikon FM"
-                  value={newProfile.name}
-                  onChange={(e) =>
-                    setNewProfile({ ...newProfile, name: e.target.value })
-                  }
-                  className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="flex gap-4 mb-5">
-                <div className="flex-1">
-                  <label className="block mb-1.5 font-medium text-gray-700 dark:text-gray-300 text-sm">
-                    Camera Make
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Nikon"
-                    value={newProfile.make}
-                    onChange={(e) =>
-                      setNewProfile({ ...newProfile, make: e.target.value })
-                    }
-                    className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block mb-1.5 font-medium text-gray-700 dark:text-gray-300 text-sm">
-                    Camera Model
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., FM"
-                    value={newProfile.model}
-                    onChange={(e) =>
-                      setNewProfile({ ...newProfile, model: e.target.value })
-                    }
-                    className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="mb-5">
-                <label className="block mb-1.5 font-medium text-gray-700 dark:text-gray-300 text-sm">
-                  Lens (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., 50mm f/1.8"
-                  value={newProfile.lens}
-                  onChange={(e) =>
-                    setNewProfile({ ...newProfile, lens: e.target.value })
-                  }
-                  className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 p-5 px-6 border-t border-gray-100 dark:border-gray-700">
-              <button
-                className="bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-md text-sm hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
-                onClick={() => {
-                  setIsCreatingProfile(false);
-                  setNewProfile({ name: "", make: "", model: "", lens: "" });
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="bg-blue-500 text-white px-5 py-2.5 rounded-md text-sm hover:bg-blue-600 transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
-                onClick={handleSaveProfile}
-                disabled={
-                  !newProfile.name || !newProfile.make || !newProfile.model
-                }
-              >
-                Save Profile
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProfileModal
+        isOpen={isCreatingProfile}
+        onClose={() => setIsCreatingProfile(false)}
+        onSave={handleSaveProfile}
+      />
     </div>
   );
 }
