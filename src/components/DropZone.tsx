@@ -1,4 +1,7 @@
 import React from "react";
+
+import { Icon } from "@iconify/react";
+
 import { ProcessResult } from "../types";
 
 interface DropZoneProps {
@@ -24,12 +27,11 @@ export function DropZone({
 }: DropZoneProps) {
   return (
     <div
-      className={`flex-1 bg-white dark:bg-neutral-700 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 relative ${
+      className={`h-full w-full bg-white dark:bg-neutral-700 flex items-center justify-center cursor-pointer transition-all duration-300 relative ${
         isDragOver
-          ? "border-blue-500 bg-blue-50 dark:bg-blue-900 border-solid"
-          : "border-gray-300 dark:border-gray-600 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900"
+          ? "bg-blue-50 dark:bg-blue-900"
+          : "hover:bg-blue-50 dark:hover:bg-blue-900"
       }`}
-      style={{ maxHeight: "calc(100vh - 120px)" }}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
@@ -38,7 +40,6 @@ export function DropZone({
       {isProcessing ? (
         <div className="flex flex-col items-center gap-4 text-gray-600 dark:text-gray-300">
           <div className="w-10 h-10 border-3 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
-          <p>Processing images...</p>
         </div>
       ) : results.length > 0 ? (
         <div className="w-full max-w-2xl text-left">
@@ -72,14 +73,10 @@ export function DropZone({
           </button>
         </div>
       ) : (
-        <div className="text-center text-gray-500 dark:text-gray-400">
-          <div className="text-6xl mb-4 opacity-60">📷</div>
-          <p className="text-xl mb-2 dark:text-gray-300">
-            Drop your scanned film images here
-          </p>
-          <p className="text-base text-gray-400 dark:text-gray-500">
-            or click to select files
-          </p>
+        <div className="text-center flex flex-col items-center text-gray-500 dark:text-gray-400">
+          <div className="text-8xl opacity-20">
+            <Icon icon="mdi:arrow-down-bold" width={128} height={128} />
+          </div>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
             Supported: JPG, JPEG, TIFF
           </p>

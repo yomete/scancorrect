@@ -122,7 +122,7 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 dark:bg-neutral-800">
-      <main className="flex-1 flex items-center justify-center p-5">
+      <main className="flex-1">
         <DropZone
           isDragOver={isDragOver}
           isProcessing={isProcessing}
