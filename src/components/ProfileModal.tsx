@@ -1,54 +1,54 @@
-import React, { useState } from 'react'
-import { CameraProfile } from '../types'
+import React, { useState } from "react";
+import { CameraProfile } from "../types";
 
 interface NewProfileData {
-  name: string
-  make: string
-  model: string
-  lens: string
+  name: string;
+  make: string;
+  model: string;
+  lens: string;
 }
 
 interface ProfileModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSave: (profile: CameraProfile) => void
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (profile: CameraProfile) => void;
 }
 
 export function ProfileModal({ isOpen, onClose, onSave }: ProfileModalProps) {
   const [newProfile, setNewProfile] = useState<NewProfileData>({
-    name: '',
-    make: '',
-    model: '',
-    lens: ''
-  })
+    name: "",
+    make: "",
+    model: "",
+    lens: "",
+  });
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleSave = () => {
-    if (!newProfile.name || !newProfile.make || !newProfile.model) return
+    if (!newProfile.name || !newProfile.make || !newProfile.model) return;
 
     const profile: CameraProfile = {
       id: Date.now().toString(),
       name: newProfile.name,
       make: newProfile.make,
       model: newProfile.model,
-      lens: newProfile.lens || undefined
-    }
+      lens: newProfile.lens || undefined,
+    };
 
-    onSave(profile)
-    setNewProfile({ name: '', make: '', model: '', lens: '' })
-  }
+    onSave(profile);
+    setNewProfile({ name: "", make: "", model: "", lens: "" });
+  };
 
   const handleClose = () => {
-    onClose()
-    setNewProfile({ name: '', make: '', model: '', lens: '' })
-  }
+    onClose();
+    setNewProfile({ name: "", make: "", model: "", lens: "" });
+  };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      handleClose()
+      handleClose();
     }
-  }
+  };
 
   return (
     <div
@@ -56,7 +56,7 @@ export function ProfileModal({ isOpen, onClose, onSave }: ProfileModalProps) {
       onClick={handleOverlayClick}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-xl w-[90%] max-w-lg shadow-2xl overflow-hidden"
+        className="bg-white dark:bg-neutral-700 rounded-xl w-[90%] max-w-lg shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-5 px-6 border-b border-gray-100 dark:border-gray-700">
@@ -83,7 +83,7 @@ export function ProfileModal({ isOpen, onClose, onSave }: ProfileModalProps) {
               onChange={(e) =>
                 setNewProfile({ ...newProfile, name: e.target.value })
               }
-              className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
+              className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-neutral-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
             />
           </div>
 
@@ -99,7 +99,7 @@ export function ProfileModal({ isOpen, onClose, onSave }: ProfileModalProps) {
                 onChange={(e) =>
                   setNewProfile({ ...newProfile, make: e.target.value })
                 }
-                className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
+                className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-neutral-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
               />
             </div>
             <div className="flex-1">
@@ -113,7 +113,7 @@ export function ProfileModal({ isOpen, onClose, onSave }: ProfileModalProps) {
                 onChange={(e) =>
                   setNewProfile({ ...newProfile, model: e.target.value })
                 }
-                className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
+                className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-neutral-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
@@ -129,20 +129,20 @@ export function ProfileModal({ isOpen, onClose, onSave }: ProfileModalProps) {
               onChange={(e) =>
                 setNewProfile({ ...newProfile, lens: e.target.value })
               }
-              className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
+              className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-neutral-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
 
         <div className="flex justify-end gap-3 p-5 px-6 border-t border-gray-100 dark:border-gray-700">
           <button
-            className="bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-md text-sm hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
+            className="bg-gray-100 dark:bg-neutral-600 text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-md text-sm hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
             onClick={handleClose}
           >
             Cancel
           </button>
           <button
-            className="bg-blue-500 text-white px-5 py-2.5 rounded-md text-sm hover:bg-blue-600 transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
+            className="bg-blue-500 text-white px-5 py-2.5 rounded-md text-sm hover:bg-blue-600 transition-colors disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed"
             onClick={handleSave}
             disabled={!newProfile.name || !newProfile.make || !newProfile.model}
           >
@@ -151,5 +151,5 @@ export function ProfileModal({ isOpen, onClose, onSave }: ProfileModalProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

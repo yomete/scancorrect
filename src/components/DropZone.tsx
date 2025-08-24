@@ -1,15 +1,15 @@
-import React from 'react'
-import { ProcessResult } from '../types'
+import React from "react";
+import { ProcessResult } from "../types";
 
 interface DropZoneProps {
-  isDragOver: boolean
-  isProcessing: boolean
-  results: ProcessResult[]
-  onDragOver: (e: React.DragEvent) => void
-  onDragLeave: (e: React.DragEvent) => void
-  onDrop: (e: React.DragEvent) => void
-  onFileSelect: () => void
-  onClearResults: () => void
+  isDragOver: boolean;
+  isProcessing: boolean;
+  results: ProcessResult[];
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+  onFileSelect: () => void;
+  onClearResults: () => void;
 }
 
 export function DropZone({
@@ -20,11 +20,11 @@ export function DropZone({
   onDragLeave,
   onDrop,
   onFileSelect,
-  onClearResults
+  onClearResults,
 }: DropZoneProps) {
   return (
     <div
-      className={`flex-1 bg-white dark:bg-gray-800 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 relative ${
+      className={`flex-1 bg-white dark:bg-neutral-700 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-all duration-300 relative ${
         isDragOver
           ? "border-blue-500 bg-blue-50 dark:bg-blue-900 border-solid"
           : "border-gray-300 dark:border-gray-600 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900"
@@ -52,9 +52,7 @@ export function DropZone({
                     : "bg-red-100 dark:bg-red-900 border-l-3 border-red-500"
                 }`}
               >
-                <span className="text-lg">
-                  {result.success ? "✅" : "❌"}
-                </span>
+                <span className="text-lg">{result.success ? "✅" : "❌"}</span>
                 <span className="font-medium flex-1 text-gray-800 dark:text-gray-200">
                   {result.file}
                 </span>
@@ -88,5 +86,5 @@ export function DropZone({
         </div>
       )}
     </div>
-  )
+  );
 }
