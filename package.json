@@ -1,59 +1,23 @@
 {
-  "name": "film-exif-editor",
+  "name": "film-exif-editor-monorepo",
   "private": true,
   "version": "0.0.1",
-  "description": "Desktop app for film photographers to fix camera metadata in scanned images",
-  "main": "dist-electron/main.js",
-  "homepage": "./",
+  "description": "Film EXIF Editor - Desktop app and marketing website monorepo",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "concurrently \"vite\" \"tsc -p electron --watch\" \"wait-on http://localhost:5173 && electron .\"",
-    "build": "tsc -p electron && vite build",
-    "preview": "vite preview",
-    "electron": "electron .",
-    "electron:dev": "tsc -p electron && electron .",
-    "dist": "npm run build && electron-builder",
-    "pack": "npm run build && electron-builder --dir"
+    "dev": "concurrently -n \"desktop,website\" -c \"blue,green\" \"npm run dev --workspace desktop\" \"npm run dev --workspace website\"",
+    "dev:desktop": "npm run dev --workspace desktop",
+    "dev:website": "npm run dev --workspace website",
+    "build": "npm run build --workspaces",
+    "build:desktop": "npm run build --workspace desktop",
+    "build:website": "npm run build --workspace website",
+    "dist": "npm run dist --workspace desktop",
+    "clean": "npm run clean --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.21",
-    "concurrently": "^8.2.2",
-    "electron": "^31.0.2",
-    "electron-builder": "^24.13.3",
-    "electron-reload": "^2.0.0-alpha.1",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.5.3",
-    "vite": "^5.3.4",
-    "wait-on": "^7.2.0"
-  },
-  "dependencies": {
-    "@iconify/react": "^6.0.0",
-    "electron-store": "^8.2.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "build": {
-    "appId": "com.filmexifeditor.app",
-    "productName": "Film EXIF Editor",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*",
-      "node_modules/**/*"
-    ],
-    "mac": {
-      "category": "public.app-category.photography"
-    },
-    "win": {
-      "target": "nsis"
-    },
-    "linux": {
-      "target": "AppImage"
-    }
+    "concurrently": "^8.2.2"
   }
 }

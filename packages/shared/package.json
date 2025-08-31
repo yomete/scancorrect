@@ -1,0 +1,29 @@
+{
+  "name": "shared",
+  "version": "0.0.1",
+  "description": "Shared utilities and types for Film EXIF Editor",
+  "private": true,
+  "main": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "require": "./src/index.ts"
+    },
+    "./types": {
+      "import": "./src/types.ts",
+      "require": "./src/types.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  }
+}

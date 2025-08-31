@@ -1,9 +1,10 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
-import { spawn } from 'child_process'
 import * as path from 'path'
 import Store from 'electron-store'
+import { ExifTool } from 'exiftool-vendored'
 
 const store = new Store()
+const exiftool = new ExifTool()
 
 interface CameraProfile {
   id: string
@@ -83,6 +84,10 @@ app.on('window-all-closed', () => {
   }
 })
 
+app.on('before-quit', async () => {
+  await exiftool.end()
+})
+
 // IPC Handlers
 ipcMain.handle('get-profiles', (): CameraProfile[] => {
   return store.get('profiles', []) as CameraProfile[]
@@ -126,40 +131,17 @@ ipcMain.handle('edit-exif', async (_, filePaths: string[], profile: CameraProfil
   return results
 })
 
-function editExifData(filePath: string, profile: CameraProfile): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const args = [
-      '-overwrite_original',
-      `-Make=${profile.make}`,
-      `-Model=${profile.model}`
-    ]
-    
-    if (profile.lens) {
-      args.push(`-LensModel=${profile.lens}`)
-    }
-    
-    args.push(filePath)
-    
-    const exiftool = spawn('exiftool', args)
-    
-    let stderr = ''
-    
-    exiftool.stderr.on('data', (data) => {
-      stderr += data.toString()
-    })
-    
-    exiftool.on('close', (code) => {
-      if (code === 0) {
-        resolve()
-      } else {
-        reject(new Error(`ExifTool failed: ${stderr || `Exit code ${code}`}`))
-      }
-    })
-    
-    exiftool.on('error', (error) => {
-      reject(new Error(`Failed to start ExifTool: ${error.message}`))
-    })
-  })
+async function editExifData(filePath: string, profile: CameraProfile): Promise<void> {
+  const tags: { [key: string]: string } = {
+    Make: profile.make,
+    Model: profile.model
+  }
+  
+  if (profile.lens) {
+    tags.LensModel = profile.lens
+  }
+  
+  await exiftool.write(filePath, tags, ['-overwrite_original'])
 }
 
 ipcMain.handle('show-open-dialog', async (): Promise<string[] | undefined> => {
