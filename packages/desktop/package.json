@@ -43,11 +43,13 @@
     "appId": "com.filmexifeditor.app",
     "productName": "Film EXIF Editor",
     "directories": {
-      "output": "../../release"
+      "output": "../../release",
+      "app": "."
     },
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
+      "package.json",
       "node_modules/**/*"
     ],
     "asarUnpack": [
