@@ -10,7 +10,9 @@
       "Bash(npm install:*)",
       "WebSearch",
       "Bash(npm run build:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

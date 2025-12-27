@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "description": "Film EXIF Editor - Desktop Electron application",
+  "author": "Film EXIF Editor",
   "main": "dist-electron/main.js",
   "homepage": "./",
   "scripts": {
@@ -22,7 +23,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
-    "electron": "^31.0.2",
+    "electron": "31.0.2",
     "electron-builder": "^24.13.3",
     "electron-reload": "^2.0.0-alpha.1",
     "postcss": "^8.5.6",
@@ -53,7 +54,8 @@
       "node_modules/exiftool-vendored*/**/*"
     ],
     "mac": {
-      "category": "public.app-category.photography"
+      "category": "public.app-category.photography",
+      "target": "dmg"
     },
     "win": {
       "target": "nsis"
