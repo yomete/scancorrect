@@ -8,7 +8,7 @@ This is an Electron + React desktop application for film photographers to easily
 
 - **Frontend**: React + TypeScript + Vite
 - **Backend**: Electron main process
-- **EXIF Editing**: ExifTool (external dependency)
+- **EXIF Editing**: exiftool-vendored (bundled, no external installation required)
 - **Data Storage**: electron-store for profiles
 - **Build System**: electron-builder
 
@@ -43,6 +43,7 @@ film-exif-editor/
 ### Production Dependencies
 - `react` + `react-dom`: UI framework
 - `electron-store`: Persistent data storage for profiles
+- `exiftool-vendored`: Bundled ExifTool binaries (no user installation required)
 
 ### Development Dependencies
 - `electron`: Desktop app framework
@@ -52,8 +53,8 @@ film-exif-editor/
 - `concurrently`: Run multiple commands
 - `wait-on`: Wait for dev server to start
 
-### External Dependencies
-- **ExifTool**: Command-line tool for EXIF editing (must be installed separately)
+### ✅ No External Dependencies Required
+The app bundles ExifTool using `exiftool-vendored`, so users don't need to install anything separately. The built app works out of the box on macOS, Windows, and Linux!
 
 ## Setup Instructions
 
@@ -66,20 +67,13 @@ film-exif-editor/
 
 2. **Install dependencies:**
    ```bash
-   npm install react react-dom electron-store
+   npm install react react-dom electron-store exiftool-vendored
    npm install -D @types/react @types/react-dom @vitejs/plugin-react concurrently electron electron-builder typescript vite wait-on
    ```
 
-3. **Install ExifTool:**
-   ```bash
-   # macOS
-   brew install exiftool
-   
-   # Windows: Download from https://exiftool.org/
-   # Linux: sudo apt-get install libimage-exiftool-perl
-   ```
+3. **Create the file structure and copy the provided code files**
 
-4. **Create the file structure and copy the provided code files**
+   Note: ExifTool is automatically bundled via `exiftool-vendored` - no separate installation required!
 
 5. **Add additional config files:**
 
@@ -232,13 +226,15 @@ film-exif-editor/
 
 ## Troubleshooting
 
-- **ExifTool not found**: Ensure ExifTool is installed and available in PATH
 - **File permissions**: App needs read/write access to image files
 - **Large batches**: Consider implementing progress bars for better UX
+- **Build issues**: See [BUILD.md](packages/desktop/BUILD.md) for detailed build instructions
 
 ## Build Notes
 
 - App uses electron-builder for packaging
 - Configured for macOS, Windows, and Linux
-- Includes all necessary files and dependencies in the build
-- ExifTool must be installed separately on target systems
+- ✅ **ExifTool is bundled** via `exiftool-vendored` - no separate installation required
+- Built apps are fully self-contained and work out of the box
+- See [BUNDLING-EXIFTOOL.md](BUNDLING-EXIFTOOL.md) for technical details
+- See [packages/desktop/BUILD.md](packages/desktop/BUILD.md) for build instructions

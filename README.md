@@ -69,8 +69,35 @@ npm run build:website    # Build Next.js website
 npm run dist             # Package for current platform
 ```
 
-Built applications will be available in the `packages/desktop/release/` directory.
+Built applications will be available in the `release/` directory at the repository root.
 The built website will be in `packages/website/.next/` directory.
+
+## Deployment
+
+### Automated Releases (Recommended)
+
+The project includes automated CI/CD with GitHub Actions:
+
+1. **Create a release:**
+   ```bash
+   ./scripts/create-release.sh
+   ```
+
+2. **GitHub Actions automatically:**
+   - Builds for macOS, Windows, and Linux
+   - Creates a GitHub Release
+   - Uploads installers for all platforms
+
+3. **Download URLs available at:**
+   ```
+   https://github.com/YOUR_USERNAME/film-exif-editor/releases/latest
+   ```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide including:
+- Setting up GitHub Actions
+- Code signing (optional)
+- Linking downloads from website
+- Versioning and release management
 
 ## Usage
 
