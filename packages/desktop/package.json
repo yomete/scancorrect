@@ -59,23 +59,20 @@
       "target": [
         "dmg",
         "zip"
-      ],
-      "icon": "build/icon.icns"
+      ]
     },
     "win": {
       "target": [
         "nsis",
         "portable"
-      ],
-      "icon": "build/icon.ico"
+      ]
     },
     "linux": {
       "target": [
         "AppImage",
         "deb"
       ],
-      "category": "Graphics",
-      "icon": "build/icon.png"
+      "category": "Graphics"
     },
     "nsis": {
       "oneClick": false,
