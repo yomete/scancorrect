@@ -4,7 +4,12 @@ import Store from 'electron-store'
 import { ExifTool } from 'exiftool-vendored'
 
 const store = new Store()
-const exiftool = new ExifTool()
+
+// Initialize ExifTool with proper configuration
+const exiftool = new ExifTool({
+  taskTimeoutMillis: 10000,
+  maxProcs: 10
+})
 
 interface CameraProfile {
   id: string
@@ -132,16 +137,21 @@ ipcMain.handle('edit-exif', async (_, filePaths: string[], profile: CameraProfil
 })
 
 async function editExifData(filePath: string, profile: CameraProfile): Promise<void> {
-  const tags: { [key: string]: string } = {
-    Make: profile.make,
-    Model: profile.model
+  try {
+    const tags: { [key: string]: string } = {
+      Make: profile.make,
+      Model: profile.model
+    }
+
+    if (profile.lens) {
+      tags.LensModel = profile.lens
+    }
+
+    await exiftool.write(filePath, tags, ['-overwrite_original'])
+  } catch (error) {
+    console.error('ExifTool error:', error)
+    throw new Error(`Failed to edit EXIF data: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
-  
-  if (profile.lens) {
-    tags.LensModel = profile.lens
-  }
-  
-  await exiftool.write(filePath, tags, ['-overwrite_original'])
 }
 
 ipcMain.handle('show-open-dialog', async (): Promise<string[] | undefined> => {
