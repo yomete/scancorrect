@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.1",
   "description": "Film EXIF Editor - Desktop app and marketing website monorepo",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "workspaces": [
     "packages/*"
   ],
