@@ -2,8 +2,8 @@
   "name": "desktop",
   "private": true,
   "version": "0.1.2",
-  "description": "Film EXIF Editor - Desktop Electron application",
-  "author": "Film EXIF Editor",
+  "description": "ScanCorrect - Desktop Electron application",
+  "author": "ScanCorrect",
   "main": "dist-electron/main.js",
   "homepage": "./",
   "scripts": {
@@ -41,7 +41,7 @@
   },
   "build": {
     "appId": "com.filmexifeditor.app",
-    "productName": "Film EXIF Editor",
+    "productName": "ScanCorrect",
     "directories": {
       "output": "../../release",
       "app": "."

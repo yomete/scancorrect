@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Film EXIF Editor - Create Release Script
+# ScanCorrect - Create Release Script
 # This script helps you create a new release with proper versioning
 
 set -e
 
-echo "🚀 Film EXIF Editor - Release Creator"
+echo "🚀 ScanCorrect - Release Creator"
 echo "======================================"
 echo ""
 

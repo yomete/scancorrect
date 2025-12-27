@@ -1,4 +1,4 @@
-# Film EXIF Editor
+# ScanCorrect
 
 A clean, minimal desktop application for film photographers to easily fix camera metadata in scanned film images. Built with Electron and React, inspired by ImageOptim's simple drag-and-drop interface.
 
@@ -7,7 +7,7 @@ This repository is organized as a monorepo containing:
 - 🌐 **Marketing Website** - Next.js landing page  
 - 📦 **Shared** - Common types and utilities
 
-![Film EXIF Editor Screenshot](https://via.placeholder.com/800x600/2d3748/ffffff?text=Film+EXIF+Editor)
+![ScanCorrect Screenshot](https://via.placeholder.com/800x600/2d3748/ffffff?text=Film+EXIF+Editor)
 
 ## Features
 

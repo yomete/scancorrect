@@ -1,4 +1,4 @@
-# Film EXIF Editor - Electron + React App
+# ScanCorrect - Electron + React App
 
 ## Project Overview
 
@@ -116,7 +116,7 @@ The app bundles ExifTool using `exiftool-vendored`, so users don't need to insta
    <head>
      <meta charset="UTF-8" />
      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-     <title>Film EXIF Editor</title>
+     <title>ScanCorrect</title>
    </head>
    <body>
      <div id="root"></div>

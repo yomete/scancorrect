@@ -1,6 +1,6 @@
-# Building Film EXIF Editor Desktop App
+# Building ScanCorrect Desktop App
 
-This guide explains how to build distributable packages of the Film EXIF Editor desktop application.
+This guide explains how to build distributable packages of the ScanCorrect desktop application.
 
 ## Overview
 
@@ -90,7 +90,7 @@ open ../../release/Film\ EXIF\ Editor-0.0.1.dmg
 
 ### Windows
 ```bash
-start ../../release/Film EXIF Editor Setup 0.0.1.exe
+start ../../release/ScanCorrect Setup 0.0.1.exe
 ```
 
 ### Linux

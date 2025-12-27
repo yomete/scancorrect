@@ -11,7 +11,7 @@ export default function Home() {
               <span className="text-xl">📷</span>
             </div>
             <span className="text-2xl font-bold text-white">
-              Film EXIF Editor
+              ScanCorrect
             </span>
           </div>
           <div className="flex space-x-8">
@@ -32,16 +32,16 @@ export default function Home() {
       <section className="container mx-auto px-6 py-24 text-center">
         <div className="max-w-5xl mx-auto">
           <p className="text-slate-400 mb-6 text-lg font-semibold tracking-wide uppercase">
-            Introducing Film EXIF Editor
+            Introducing ScanCorrect
           </p>
           <h1 className="text-7xl md:text-8xl font-black text-white mb-10 leading-tight tracking-tight">
             Fix your film photos&apos; metadata instantly
           </h1>
           <p className="text-2xl text-slate-300 mb-16 max-w-4xl mx-auto leading-relaxed font-light">
-            Transform generic scanner metadata into proper camera details. Film
-            EXIF Editor gives you a beautiful drag-and-drop interface to fix
-            camera metadata in your scanned film images, with powerful batch
-            processing and no external dependencies.
+            Transform generic scanner metadata into proper camera details. ScanCorrect
+            gives you a beautiful drag-and-drop interface to fix camera metadata in
+            your scanned film images, with powerful batch processing and no external
+            dependencies.
           </p>
           <button className="bg-slate-800 text-white px-12 py-5 rounded-2xl text-xl font-bold hover:bg-black hover:scale-105 transition-all duration-300 shadow-2xl shadow-black/50 hover:shadow-2xl hover:shadow-black/60">
             Download for Free
@@ -79,7 +79,7 @@ export default function Home() {
             Ready to fix your film photos?
           </h2>
           <p className="text-2xl text-slate-300 mb-16 font-light leading-relaxed">
-            Download Film EXIF Editor and start transforming your scanned film
+            Download ScanCorrect and start transforming your scanned film
             images today.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12">

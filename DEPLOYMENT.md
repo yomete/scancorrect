@@ -1,6 +1,6 @@
-# Deployment Guide - Film EXIF Editor
+# Deployment Guide - ScanCorrect
 
-This guide explains how to deploy the Film EXIF Editor desktop app with automated builds and releases.
+This guide explains how to deploy the ScanCorrect desktop app with automated builds and releases.
 
 ## Overview
 

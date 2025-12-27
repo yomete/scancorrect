@@ -2,7 +2,7 @@
 
 ## create-release.sh
 
-Interactive script to create a new release of the Film EXIF Editor desktop app.
+Interactive script to create a new release of the ScanCorrect desktop app.
 
 ### Usage
 
@@ -25,7 +25,7 @@ Interactive script to create a new release of the Film EXIF Editor desktop app.
 ```
 $ ./scripts/create-release.sh
 
-🚀 Film EXIF Editor - Release Creator
+🚀 ScanCorrect - Release Creator
 ======================================
 
 Current version: v0.0.1
