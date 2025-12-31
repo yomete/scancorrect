@@ -72,10 +72,15 @@ export default function BeforeAfterSlider({
   }, [isDragging, handleMouseMove]);
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full mx-auto">
+      {/* Instructions */}
+      <div className="text-center mb-4 text-slate-600 text-sm">
+        Drag the slider to see the transformation
+      </div>
+
       <div
         ref={containerRef}
-        className="relative w-full aspect-[2/3] overflow-hidden rounded-lg shadow-2xl cursor-col-resize select-none"
+        className="relative w-full overflow-hidden rounded-lg shadow-2xl cursor-col-resize select-none"
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -83,17 +88,11 @@ export default function BeforeAfterSlider({
         onTouchEnd={handleMouseUp}
       >
         {/* After Image (Background) */}
-        <div className="absolute inset-0">
-          {/* <img
+        <div className="relative">
+          <img
             src={afterImage}
             alt={afterAlt}
-            className="w-full h-full object-cover"
-            draggable={false}
-          /> */}
-          <img
-            src={beforeImage}
-            alt={beforeAlt}
-            className="w-full h-full object-cover"
+            className="w-full h-auto object-contain"
             draggable={false}
           />
 
@@ -108,9 +107,9 @@ export default function BeforeAfterSlider({
           style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
         >
           <img
-            src={afterImage}
-            alt={afterAlt}
-            className="w-full h-full object-cover"
+            src={beforeImage}
+            alt={beforeAlt}
+            className="w-full h-auto object-contain"
             draggable={false}
           />
           <div className="absolute top-4 left-4 bg-slate-900 text-white px-3 py-1 rounded-full text-sm font-medium border border-slate-700">
@@ -133,11 +132,6 @@ export default function BeforeAfterSlider({
             <div className="w-1 h-4 bg-gray-400 rounded ml-1"></div>
           </div>
         </div>
-      </div>
-
-      {/* Instructions */}
-      <div className="text-center mt-4 text-slate-400 text-sm">
-        Drag the slider to see the transformation
       </div>
     </div>
   );
