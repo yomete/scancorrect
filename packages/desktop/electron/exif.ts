@@ -1,0 +1,265 @@
+import { ExifTool, Tags } from 'exiftool-vendored'
+import * as fs from 'fs/promises'
+
+export interface ExifData {
+  make?: string
+  model?: string
+  lens?: string
+  iso?: number
+  aperture?: number
+  shutterSpeed?: number
+  focalLength?: number
+  exposureComp?: number
+  filmStock?: string
+  location?: {
+    name: string
+    latitude: number
+    longitude: number
+  }
+  dateOriginal?: string // YYYY-MM-DD format
+}
+
+export interface WriteResult {
+  success: boolean
+  backupPath?: string
+  error?: string
+}
+
+// Extended Tags interface for properties not in exiftool-vendored's TypeScript definitions
+// These tags are supported by ExifTool but not typed in the library
+interface ExtendedTags extends Tags {
+  ExposureBiasValue?: number
+}
+
+/**
+ * Reads EXIF data from an image file and returns it in our structured format
+ */
+export async function readExifData(
+  exiftool: ExifTool,
+  filePath: string
+): Promise<ExifData> {
+  const tags = await exiftool.read(filePath) as ExtendedTags
+
+  const exifData: ExifData = {}
+
+  // Camera info
+  if (tags.Make) {
+    exifData.make = String(tags.Make)
+  }
+  if (tags.Model) {
+    exifData.model = String(tags.Model)
+  }
+  if (tags.LensModel) {
+    exifData.lens = String(tags.LensModel)
+  }
+
+  // Exposure settings
+  if (tags.ISO !== undefined) {
+    exifData.iso = Number(tags.ISO)
+  }
+  if (tags.FNumber !== undefined) {
+    exifData.aperture = Number(tags.FNumber)
+  }
+  if (tags.ExposureTime !== undefined) {
+    exifData.shutterSpeed = Number(tags.ExposureTime)
+  }
+  if (tags.FocalLength !== undefined) {
+    // FocalLength can be a string like "50 mm" or a number
+    const focalLength = tags.FocalLength
+    if (typeof focalLength === 'string') {
+      const match = focalLength.match(/^([\d.]+)/)
+      if (match) {
+        exifData.focalLength = parseFloat(match[1])
+      }
+    } else {
+      exifData.focalLength = Number(focalLength)
+    }
+  }
+  if (tags.ExposureBiasValue !== undefined) {
+    exifData.exposureComp = Number(tags.ExposureBiasValue)
+  }
+
+  // Film stock (stored in ImageDescription)
+  if (tags.ImageDescription) {
+    exifData.filmStock = String(tags.ImageDescription)
+  }
+
+  // GPS coordinates
+  if (tags.GPSLatitude !== undefined && tags.GPSLongitude !== undefined) {
+    let latitude = Number(tags.GPSLatitude)
+    let longitude = Number(tags.GPSLongitude)
+
+    // Apply reference directions
+    if (tags.GPSLatitudeRef === 'S' || tags.GPSLatitudeRef === 'South') {
+      latitude = Math.abs(latitude) * -1
+    }
+    if (tags.GPSLongitudeRef === 'W' || tags.GPSLongitudeRef === 'West') {
+      longitude = Math.abs(longitude) * -1
+    }
+
+    exifData.location = {
+      name: '', // Location name is not stored in EXIF, would need reverse geocoding
+      latitude,
+      longitude
+    }
+  }
+
+  // Date original
+  if (tags.DateTimeOriginal) {
+    const dateTime = tags.DateTimeOriginal
+    // Handle ExifDateTime object from exiftool-vendored
+    if (typeof dateTime === 'object' && 'year' in dateTime) {
+      const dt = dateTime as { year: number; month: number; day: number }
+      const year = dt.year
+      const month = String(dt.month).padStart(2, '0')
+      const day = String(dt.day).padStart(2, '0')
+      exifData.dateOriginal = `${year}-${month}-${day}`
+    } else if (typeof dateTime === 'string') {
+      // Handle string format "YYYY:MM:DD HH:MM:SS"
+      const match = dateTime.match(/^(\d{4}):(\d{2}):(\d{2})/)
+      if (match) {
+        exifData.dateOriginal = `${match[1]}-${match[2]}-${match[3]}`
+      }
+    }
+  }
+
+  return exifData
+}
+
+/**
+ * Writes EXIF data to an image file
+ * @param exiftool - ExifTool instance
+ * @param filePath - Path to the image file
+ * @param data - EXIF data to write
+ * @param keepBackup - If true, keeps a backup of the original file (default: true)
+ * @returns WriteResult with success status and optional backup path
+ */
+export async function writeExifData(
+  exiftool: ExifTool,
+  filePath: string,
+  data: ExifData,
+  keepBackup: boolean = true
+): Promise<WriteResult> {
+  try {
+    const tags: Record<string, unknown> = {}
+
+    // Camera info
+    if (data.make !== undefined) {
+      tags.Make = data.make
+    }
+    if (data.model !== undefined) {
+      tags.Model = data.model
+    }
+    if (data.lens !== undefined) {
+      tags.LensModel = data.lens
+    }
+
+    // Exposure settings
+    if (data.iso !== undefined) {
+      tags.ISO = data.iso
+    }
+    if (data.aperture !== undefined) {
+      tags.FNumber = data.aperture
+    }
+    if (data.shutterSpeed !== undefined) {
+      tags.ExposureTime = data.shutterSpeed
+    }
+    if (data.focalLength !== undefined) {
+      tags.FocalLength = data.focalLength
+    }
+    if (data.exposureComp !== undefined) {
+      tags.ExposureBiasValue = data.exposureComp
+    }
+
+    // Film stock (stored in ImageDescription)
+    if (data.filmStock !== undefined) {
+      tags.ImageDescription = data.filmStock
+    }
+
+    // GPS coordinates
+    if (data.location !== undefined) {
+      const { latitude, longitude } = data.location
+
+      // Store absolute values with reference tags
+      tags.GPSLatitude = Math.abs(latitude)
+      tags.GPSLongitude = Math.abs(longitude)
+      tags.GPSLatitudeRef = latitude >= 0 ? 'N' : 'S'
+      tags.GPSLongitudeRef = longitude >= 0 ? 'E' : 'W'
+    }
+
+    // Date original - convert from YYYY-MM-DD to EXIF format YYYY:MM:DD HH:MM:SS
+    if (data.dateOriginal !== undefined) {
+      const exifDate = data.dateOriginal.replace(/-/g, ':') + ' 12:00:00'
+      tags.DateTimeOriginal = exifDate
+    }
+
+    // Build options array
+    const options: string[] = []
+    if (!keepBackup) {
+      options.push('-overwrite_original')
+    }
+
+    await exiftool.write(filePath, tags, options)
+
+    // Determine backup path if backup was kept
+    const backupPath = keepBackup ? `${filePath}_original` : undefined
+
+    return {
+      success: true,
+      backupPath
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error writing EXIF data'
+    }
+  }
+}
+
+/**
+ * Restores a file from its backup
+ * @param filePath - Path to the current file to restore
+ * @param backupPath - Optional explicit backup path. If not provided, uses filePath + '_original'
+ * @returns true if restore was successful, false otherwise
+ */
+export async function restoreFromBackup(filePath: string, backupPath?: string): Promise<boolean> {
+  const resolvedBackupPath = backupPath || `${filePath}_original`
+
+  try {
+    // Check if backup exists
+    await fs.access(resolvedBackupPath)
+
+    // Delete the current file
+    await fs.unlink(filePath)
+
+    // Rename backup to original filename
+    await fs.rename(resolvedBackupPath, filePath)
+
+    return true
+  } catch (error) {
+    console.error(`Failed to restore from backup: ${error}`)
+    return false
+  }
+}
+
+/**
+ * Deletes a backup file
+ * @param backupPath - Path to the backup file to delete
+ */
+export async function cleanupBackup(backupPath: string): Promise<void> {
+  try {
+    await fs.access(backupPath)
+    await fs.unlink(backupPath)
+  } catch (error) {
+    // Backup file doesn't exist or couldn't be deleted - silently ignore
+    console.warn(`Could not cleanup backup at ${backupPath}: ${error}`)
+  }
+}
+
+/**
+ * Cleans up multiple backup files
+ * @param backupPaths - Array of backup file paths to delete
+ */
+export async function cleanupBackups(backupPaths: string[]): Promise<void> {
+  await Promise.all(backupPaths.map(cleanupBackup))
+}

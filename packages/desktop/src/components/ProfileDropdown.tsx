@@ -9,6 +9,7 @@ interface ProfileDropdownProps {
   selectedProfile: string;
   onProfileSelect: (profileId: string) => void;
   onProfileDelete: (profileId: string) => void;
+  onProfileEdit?: (profile: CameraProfile) => void;
 }
 
 export function ProfileDropdown({
@@ -16,6 +17,7 @@ export function ProfileDropdown({
   selectedProfile,
   onProfileSelect,
   onProfileDelete,
+  onProfileEdit,
 }: ProfileDropdownProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -44,6 +46,12 @@ export function ProfileDropdown({
   const handleProfileDelete = (e: React.MouseEvent, profileId: string) => {
     e.stopPropagation();
     onProfileDelete(profileId);
+  };
+
+  const handleProfileEdit = (e: React.MouseEvent, profile: CameraProfile) => {
+    e.stopPropagation();
+    setShowDropdown(false);
+    onProfileEdit?.(profile);
   };
 
   return (
@@ -86,13 +94,24 @@ export function ProfileDropdown({
                       {profile.lens && ` • ${profile.lens}`}
                     </span>
                   </div>
-                  <button
-                    className="text-gray-400 dark:text-gray-500 p-1 rounded hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm opacity-0 group-hover:opacity-100"
-                    onClick={(e) => handleProfileDelete(e, profile.id)}
-                    title="Delete profile"
-                  >
-                    <Icon icon="material-symbols:delete" />
-                  </button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                    {onProfileEdit && (
+                      <button
+                        className="text-gray-400 dark:text-gray-500 p-1 rounded hover:text-blue-500 dark:hover:text-blue-400 transition-colors text-sm"
+                        onClick={(e) => handleProfileEdit(e, profile)}
+                        title="Edit profile"
+                      >
+                        <Icon icon="material-symbols:edit" />
+                      </button>
+                    )}
+                    <button
+                      className="text-gray-400 dark:text-gray-500 p-1 rounded hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm"
+                      onClick={(e) => handleProfileDelete(e, profile.id)}
+                      title="Delete profile"
+                    >
+                      <Icon icon="material-symbols:delete" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </>

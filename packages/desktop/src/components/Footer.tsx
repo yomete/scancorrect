@@ -10,6 +10,7 @@ interface FooterProps {
   onAddProfile: () => void;
   onProfileSelect: (profileId: string) => void;
   onProfileDelete: (profileId: string) => void;
+  onProfileEdit?: (profile: CameraProfile) => void;
 }
 
 export function Footer({
@@ -18,6 +19,7 @@ export function Footer({
   onAddProfile,
   onProfileSelect,
   onProfileDelete,
+  onProfileEdit,
 }: FooterProps) {
   const getCurrentProfile = () => {
     return profiles.find((p) => p.id === selectedProfile);
@@ -56,6 +58,7 @@ export function Footer({
           selectedProfile={selectedProfile}
           onProfileSelect={onProfileSelect}
           onProfileDelete={onProfileDelete}
+          onProfileEdit={onProfileEdit}
         />
       </div>
     </footer>

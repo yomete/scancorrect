@@ -12,7 +12,17 @@
       "Bash(npm run build:*)",
       "Bash(git restore:*)",
       "Bash(npx create-next-app:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(/Users/yomi/Documents/batcave/film-exif-editor/node_modules/.bin/electron:*)",
+      "Bash(cat:*)",
+      "Bash(/Users/yomi/Documents/batcave/film-exif-editor/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron:*)",
+      "Bash(open:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx electron:*)",
+      "Bash(npx which:*)",
+      "Bash(timeout 30 npm run dev:*)",
+      "Bash(gtimeout 30 npm run dev:*)",
+      "Bash(./node_modules/.bin/electron -e \"console.log(''app:'', typeof require(''electron'').app, require(''electron''))\")"
     ],
     "deny": [],
     "ask": []
