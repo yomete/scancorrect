@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 import { useTheme } from "./ThemeContext";
 import {
@@ -9,6 +9,7 @@ import {
   BulkActionBar,
   BulkLocationModal,
   ProcessingLog,
+  ImageSidebar,
 } from "./components";
 import {
   CameraProfile,
@@ -21,6 +22,13 @@ import {
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 type AppView = "dropzone" | "grid";
+
+// Extend window for close confirmation
+declare global {
+  interface Window {
+    __hasUnsavedChanges?: () => boolean;
+  }
+}
 
 function App() {
   const { theme } = useTheme();
@@ -70,6 +78,22 @@ function App() {
     loadProfiles();
     loadProcessingLog();
   }, []);
+
+  // Track if save was triggered by close dialog
+  const saveAndCloseRef = useRef(false);
+
+  // Set up unsaved changes check for window close
+  useEffect(() => {
+    window.__hasUnsavedChanges = () => {
+      return images.some(
+        (img) => img.pendingChanges && Object.keys(img.pendingChanges).length > 0
+      );
+    };
+
+    return () => {
+      delete window.__hasUnsavedChanges;
+    };
+  }, [images]);
 
   const loadProfiles = async () => {
     try {
@@ -221,14 +245,28 @@ function App() {
   };
 
   const handleImageClick = (image: ImageFile) => {
-    // Toggle selection when clicking an image
-    const newSelectedIds = new Set(selectedImageIds);
-    if (newSelectedIds.has(image.path)) {
-      newSelectedIds.delete(image.path);
-    } else {
-      newSelectedIds.add(image.path);
-    }
-    setSelectedImageIds(newSelectedIds);
+    // Select only this image (deselect others) to open in sidebar
+    setSelectedImageIds(new Set([image.path]));
+  };
+
+  const handleUpdatePendingChanges = (path: string, changes: Partial<ExifData>) => {
+    setImages((prev) =>
+      prev.map((img) =>
+        img.path === path
+          ? { ...img, pendingChanges: { ...img.pendingChanges, ...changes } }
+          : img
+      )
+    );
+  };
+
+  const handleUpdateMultiplePendingChanges = (paths: string[], changes: Partial<ExifData>) => {
+    setImages((prev) =>
+      prev.map((img) =>
+        paths.includes(img.path)
+          ? { ...img, pendingChanges: { ...img.pendingChanges, ...changes } }
+          : img
+      )
+    );
   };
 
   const handleSelectAll = () => {
@@ -309,7 +347,7 @@ function App() {
     );
   };
 
-  const handleSaveChanges = async () => {
+  const handleSaveChanges = useCallback(async () => {
     if (images.length === 0) return;
 
     setIsProcessing(true);
@@ -382,7 +420,22 @@ function App() {
 
     setProcessingLog((prev) => [...results, ...prev]);
     setIsProcessing(false);
-  };
+
+    // If save was triggered by close dialog, close window now
+    if (saveAndCloseRef.current) {
+      saveAndCloseRef.current = false;
+      window.electronAPI.forceCloseWindow();
+    }
+  }, [images, profiles, selectedProfile]);
+
+  // Listen for save-before-close event from main process
+  useEffect(() => {
+    const cleanup = window.electronAPI.onSaveBeforeClose(() => {
+      saveAndCloseRef.current = true;
+      handleSaveChanges();
+    });
+    return cleanup;
+  }, [handleSaveChanges]);
 
   const handleUndo = async (entry: ProcessingLogEntry) => {
     if (!entry.backupPath) return;
@@ -404,6 +457,19 @@ function App() {
   };
 
   const handleClearLog = async () => {
+    // Cleanup backup files before clearing log
+    const backupPaths = processingLog
+      .filter((entry) => entry.success && entry.backupPath)
+      .map((entry) => entry.backupPath as string);
+
+    if (backupPaths.length > 0) {
+      try {
+        await window.electronAPI.cleanupBackups(backupPaths);
+      } catch (error) {
+        console.error("Failed to cleanup backups:", error);
+      }
+    }
+
     try {
       await window.electronAPI.clearProcessingLog();
       setProcessingLog([]);
@@ -412,10 +478,34 @@ function App() {
     }
   };
 
-  const handleClearImages = () => {
+  const handleClearImages = async () => {
+    // Cleanup backup files for successfully saved images
+    const backupPaths = processingLog
+      .filter((entry) => entry.success && entry.backupPath)
+      .map((entry) => entry.backupPath as string);
+
+    if (backupPaths.length > 0) {
+      try {
+        await window.electronAPI.cleanupBackups(backupPaths);
+      } catch (error) {
+        console.error("Failed to cleanup backups:", error);
+      }
+    }
+
     setImages([]);
     setSelectedImageIds(new Set());
     setCurrentView("dropzone");
+  };
+
+  const handleDiscardChanges = () => {
+    // Clear all pending changes from all images
+    setImages((prev) =>
+      prev.map((img) => ({
+        ...img,
+        pendingChanges: {},
+        status: "pending",
+      }))
+    );
   };
 
   // Calculate how many images have pending changes
@@ -471,6 +561,13 @@ function App() {
                   )}
                 </button>
                 <button
+                  onClick={handleDiscardChanges}
+                  disabled={isProcessing || imagesWithChanges === 0}
+                  className="px-4 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-neutral-600 hover:bg-gray-300 dark:hover:bg-neutral-500 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Discard All
+                </button>
+                <button
                   onClick={handleSaveChanges}
                   disabled={isProcessing || imagesWithChanges === 0}
                   className="px-4 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed transition-colors"
@@ -482,13 +579,21 @@ function App() {
               </div>
             </div>
 
-            {/* Image grid */}
-            <div className="flex-1 overflow-hidden">
-              <ImageGrid
-                images={images}
-                selectedIds={selectedImageIds}
-                onSelectionChange={setSelectedImageIds}
-                onImageClick={handleImageClick}
+            {/* Image grid and sidebar */}
+            <div className="flex-1 flex overflow-hidden">
+              <div className="flex-1 overflow-hidden">
+                <ImageGrid
+                  images={images}
+                  selectedIds={selectedImageIds}
+                  onSelectionChange={setSelectedImageIds}
+                  onImageClick={handleImageClick}
+                />
+              </div>
+              <ImageSidebar
+                selectedImages={images.filter((img) => selectedImageIds.has(img.path))}
+                onUpdatePendingChanges={handleUpdatePendingChanges}
+                onUpdateMultiplePendingChanges={handleUpdateMultiplePendingChanges}
+                activeProfile={profiles.find((p) => p.id === selectedProfile) || null}
               />
             </div>
 

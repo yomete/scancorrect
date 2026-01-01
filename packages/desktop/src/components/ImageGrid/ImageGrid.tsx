@@ -56,6 +56,11 @@ export function ImageGrid({
     onSelectionChange(newSelectedIds);
   };
 
+  // Check if an image has pending changes
+  const hasPendingChanges = (image: ImageFile): boolean => {
+    return !!image.pendingChanges && Object.keys(image.pendingChanges).length > 0;
+  };
+
   // Check if an image has scanner metadata
   const hasScannerMetadata = (image: ImageFile): boolean => {
     const SCANNER_BRANDS = [
@@ -134,6 +139,7 @@ export function ImageGrid({
               onSelect={(selected) => handleImageSelect(image, selected)}
               onClick={() => onImageClick(image)}
               showScannerWarning={hasScannerMetadata(image)}
+              hasPendingChanges={hasPendingChanges(image)}
             />
           ))}
         </div>

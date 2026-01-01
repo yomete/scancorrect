@@ -1,6 +1,7 @@
 import React from "react";
 import { Icon } from "@iconify/react";
 import type { ImageFile } from "../../types";
+import { useThumbnailExtraction } from "../../hooks/useThumbnailExtraction";
 
 interface ImageCardProps {
   image: ImageFile;
@@ -8,6 +9,7 @@ interface ImageCardProps {
   onSelect: (selected: boolean) => void;
   onClick: () => void;
   showScannerWarning: boolean;
+  hasPendingChanges?: boolean;
 }
 
 export function ImageCard({
@@ -16,7 +18,9 @@ export function ImageCard({
   onSelect,
   onClick,
   showScannerWarning,
+  hasPendingChanges = false,
 }: ImageCardProps) {
+  const { thumbnail, loading: thumbnailLoading } = useThumbnailExtraction(image.path);
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation();
     onSelect(e.target.checked);
@@ -107,17 +111,23 @@ export function ImageCard({
 
   const metadataSummary = getMetadataSummary();
 
+  const getBorderClass = () => {
+    if (selected) {
+      return "border-blue-500 bg-blue-50 dark:bg-blue-900/30";
+    }
+    if (hasPendingChanges) {
+      return "border-amber-400 dark:border-amber-500 bg-white dark:bg-neutral-700 hover:border-amber-500 dark:hover:border-amber-400";
+    }
+    return "border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 hover:border-gray-300 dark:hover:border-neutral-500";
+  };
+
   return (
     <div
       onClick={onClick}
       className={`
         relative flex flex-col p-3 rounded-lg border-2 cursor-pointer
         transition-all duration-150
-        ${
-          selected
-            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
-            : "border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 hover:border-gray-300 dark:hover:border-neutral-500"
-        }
+        ${getBorderClass()}
       `}
     >
       {/* Header: Checkbox and Status */}
@@ -149,12 +159,22 @@ export function ImageCard({
         </div>
       </div>
 
-      {/* File Icon */}
-      <div className="flex justify-center py-4">
-        <Icon
-          icon={getFileIcon()}
-          className="w-12 h-12 text-gray-400 dark:text-gray-500"
-        />
+      {/* Thumbnail or File Icon */}
+      <div className="flex justify-center items-center py-2 min-h-[80px]">
+        {thumbnailLoading ? (
+          <div className="w-6 h-6 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin" />
+        ) : thumbnail ? (
+          <img
+            src={thumbnail}
+            alt={image.filename}
+            className="max-h-[80px] max-w-full object-contain rounded"
+          />
+        ) : (
+          <Icon
+            icon={getFileIcon()}
+            className="w-12 h-12 text-gray-400 dark:text-gray-500"
+          />
+        )}
       </div>
 
       {/* Filename */}

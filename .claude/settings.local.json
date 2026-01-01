@@ -24,7 +24,8 @@
       "Bash(gtimeout 30 npm run dev:*)",
       "Bash(./node_modules/.bin/electron -e \"console.log(''app:'', typeof require(''electron'').app, require(''electron''))\")",
       "Bash(grep:*)",
-      "Bash(act push:*)"
+      "Bash(act push:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

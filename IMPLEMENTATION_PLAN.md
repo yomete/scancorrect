@@ -77,7 +77,416 @@ This document outlines the implementation plan for adding comprehensive metadata
 
 ---
 
-## Technical Implementation
+## New Feature: Per-Image Editing, Thumbnails & Bulk Date
+
+### Interview Summary (January 2026)
+
+#### Edit Model
+- **Staged edits**: Changes accumulate in memory, written to disk on explicit "Save All"
+- **Profile as template**: Profile pre-fills fields, user can override per-image
+- **Warn on exit**: Block app close with unsaved changes dialog
+
+#### Per-Image Editing
+- **Right sidebar layout**: Grid on left, editor panel on right (min window: 1024px)
+- **Click behavior**: Clicking an image deselects others and opens it in sidebar
+- **Multi-select**: Shows mixed state with "Multiple values" indicator, edits apply immediately to all selected
+- **Inline diff**: Show original→new side-by-side, "Restore" button to revert
+- **Full keyboard nav**: Tab through fields, Enter saves, Escape cancels
+
+#### Thumbnails
+- **Source**: Extract embedded JPEG via exiftool (ThumbnailImage/PreviewImage tags)
+- **Loading**: Async with spinners, images pop in as ready
+- **Sizing**: Native size, CSS object-fit for consistent display
+- **Fallback**: File type icons (current behavior) when extraction fails
+- **Cache**: User setting to enable/disable persistent disk cache
+
+#### Date Handling
+- **Date only**: No time component handling
+- **Smart propagation**: Set date for first image, propagates to all selected
+- **Propagation order**: Filename sort (alphabetical/numerical)
+- **UI location**: Integrated into sidebar (works for single and multi-select)
+
+#### Conflict Resolution
+- **Smart default**: Auto-override scanner-detected fields, preserve user-set fields
+- **Scanner indicator**: Small badge/icon on fields that replaced scanner values
+- **Per-field control**: User can override smart defaults field-by-field
+
+#### Visual Indicators
+- **Staged changes**: Colored border on grid thumbnails with pending changes
+- **Scanner replaced**: Icon next to affected field labels in sidebar
+
+#### State Management
+- **Zustand**: New store for images, selection, and edits (replaces prop drilling)
+
+#### Save/Discard
+- **Save location**: Prominent button in toolbar
+- **Discard all**: Prominent button near Save, with confirmation dialog
+
+#### Sidebar Details
+- **Thumbnail size**: Larger preview (300-400px) at top for single image
+- **Field visibility**: Show only populated fields + "Add field" dropdown
+- **Add field prefill**: Pre-fills from profile defaults if available
+
+---
+
+## Architecture
+
+### New Dependencies
+```json
+{
+  "zustand": "^4.x"
+}
+```
+
+### File Structure
+```
+packages/desktop/src/
+├── store/
+│   ├── index.ts                    # Store exports
+│   ├── imageStore.ts               # Zustand store for images/selection/edits
+│   └── settingsStore.ts            # User preferences (cache setting, etc.)
+├── components/
+│   ├── Sidebar/
+│   │   ├── index.ts
+│   │   ├── ImageSidebar.tsx        # Main sidebar container
+│   │   ├── SingleImageEditor.tsx   # Editor for single selected image
+│   │   ├── MultiImageEditor.tsx    # Editor for multiple selected images
+│   │   ├── FieldEditor.tsx         # Individual field with diff display
+│   │   ├── AddFieldDropdown.tsx    # Dropdown to add empty fields
+│   │   └── SidebarThumbnail.tsx    # Large thumbnail preview
+│   ├── ImageGrid/
+│   │   ├── ImageCard.tsx           # Updated with thumbnail support
+│   │   └── ThumbnailPlaceholder.tsx # Spinner/fallback states
+│   └── Toolbar/
+│       ├── SaveDiscardButtons.tsx  # Save All / Discard All buttons
+│       └── UnsavedIndicator.tsx    # Visual indicator of pending changes
+├── hooks/
+│   ├── useThumbnailExtraction.ts   # Hook for async thumbnail loading
+│   └── useUnsavedChangesWarning.ts # Hook for exit warning
+└── types.ts                        # Updated types
+```
+
+### Electron IPC Additions
+```typescript
+// New handlers in electron/main.ts
+'extract-thumbnail': (filePath: string) => Promise<string | null>  // Returns base64 or null
+'get-cache-setting': () => Promise<boolean>
+'set-cache-setting': (enabled: boolean) => Promise<void>
+'get-cached-thumbnail': (filePath: string) => Promise<string | null>
+'cache-thumbnail': (filePath: string, base64: string) => Promise<void>
+```
+
+---
+
+## Implementation Steps
+
+### Phase 1: State Management Foundation
+
+#### 1.1 Install Zustand
+```bash
+cd packages/desktop && npm install zustand
+```
+
+#### 1.2 Create Image Store
+Create `src/store/imageStore.ts`:
+- Migrate `images`, `selectedIds` state from App.tsx
+- Add `pendingChanges` map keyed by image path
+- Actions: `addImages`, `removeImages`, `selectImage`, `updatePendingChanges`, `discardAllChanges`, `discardImageChanges`
+- Selectors: `getSelectedImages`, `hasUnsavedChanges`, `getImageWithPendingChanges`
+
+#### 1.3 Create Settings Store
+Create `src/store/settingsStore.ts`:
+- `thumbnailCacheEnabled: boolean`
+- Persist to electron-store
+
+#### 1.4 Refactor App.tsx
+- Remove image/selection state, use store hooks
+- Keep profile state (separate concern)
+- Simplify component to layout + orchestration
+
+---
+
+### Phase 2: Thumbnail Extraction
+
+#### 2.1 Add IPC Handler for Thumbnail Extraction
+In `electron/main.ts`:
+```typescript
+ipcMain.handle('extract-thumbnail', async (_, filePath: string) => {
+  try {
+    const tags = await exiftool.read(filePath, ['-ThumbnailImage', '-PreviewImage', '-b']);
+    const thumbnail = tags.ThumbnailImage || tags.PreviewImage;
+    if (thumbnail && Buffer.isBuffer(thumbnail)) {
+      return `data:image/jpeg;base64,${thumbnail.toString('base64')}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+});
+```
+
+#### 2.2 Add Thumbnail Caching IPC
+- `get-cached-thumbnail`: Read from temp directory by hash of file path
+- `cache-thumbnail`: Write base64 to temp directory
+- `clear-thumbnail-cache`: Delete all cached thumbnails
+
+#### 2.3 Create useThumbnailExtraction Hook
+```typescript
+function useThumbnailExtraction(filePath: string): {
+  thumbnail: string | null;
+  loading: boolean;
+  error: boolean;
+}
+```
+- Check cache first (if enabled)
+- Extract via IPC
+- Cache result (if enabled)
+- Return loading/error states
+
+#### 2.4 Update ImageCard Component
+- Accept `thumbnail` prop (base64 string or null)
+- Show spinner while loading
+- Show image when available
+- Fall back to file type icon on error/null
+- Add colored border when image has pending changes
+
+#### 2.5 Update ImageGrid
+- Use `useThumbnailExtraction` for each image
+- Pass thumbnail data to ImageCard
+
+---
+
+### Phase 3: Sidebar Editor
+
+#### 3.1 Create Sidebar Container
+`ImageSidebar.tsx`:
+- Fixed width (320px)
+- Scrollable content
+- Conditional render based on selection count:
+  - 0 selected: "Select an image to edit"
+  - 1 selected: `<SingleImageEditor />`
+  - 2+ selected: `<MultiImageEditor />`
+
+#### 3.2 Create SingleImageEditor
+- Large thumbnail at top (300px max height)
+- Filename display
+- List of populated fields using `<FieldEditor />`
+- "Add field" dropdown at bottom
+- Scanner replaced badges on affected fields
+
+#### 3.3 Create MultiImageEditor
+- Count indicator: "Editing X images"
+- Smaller/no thumbnail (or grid of tiny thumbs)
+- Fields show "Multiple values" when values differ
+- Edits apply immediately to all selected (update store)
+- Date field with smart propagation
+
+#### 3.4 Create FieldEditor Component
+Props: `field`, `existingValue`, `pendingValue`, `onRestore`, `onChange`, `scannerReplaced`
+- Show label with optional scanner-replaced icon
+- If values differ: inline diff display (existing → pending)
+- Edit input appropriate to field type (text, dropdown, date picker)
+- "Restore" button when modified
+
+#### 3.5 Create AddFieldDropdown
+- List all available fields not currently shown
+- On select: add field with profile default (if exists) or empty
+- Group by category if helpful (Camera, Exposure, Other)
+
+#### 3.6 Update App Layout
+- CSS Grid or Flexbox: `[grid | sidebar]`
+- Enforce minimum window width: 1024px
+- Sidebar always visible (no collapse needed per decisions)
+
+---
+
+### Phase 4: Bulk Date with Smart Propagation
+
+#### 4.1 Add DateField to Sidebar
+- Standard date input (existing DateField component)
+- In multi-select mode: shows "Multiple values" or common date
+- On change: propagate to all selected images
+
+#### 4.2 Implement Smart Propagation
+When date is set in multi-select mode:
+1. Get selected images
+2. Sort by filename (alphabetical/numerical)
+3. Apply same date to all
+4. Update store with new pending changes
+
+---
+
+### Phase 5: Conflict Resolution and Scanner Detection
+
+#### 5.1 Enhance Scanner Detection
+- Current: detects scanner make/model
+- Add: flag in image state `hasScannerMetadata: boolean`
+- Auto-apply profile to scanner-detected images
+
+#### 5.2 Smart Default Behavior
+When profile applied to image with existing EXIF:
+- If field has scanner value → override with profile
+- If field has non-scanner value → keep existing (user can override)
+- Track which fields were scanner-replaced
+
+#### 5.3 Scanner Replaced Badge
+- Small icon component (e.g., `<ScannerReplacedIcon />`)
+- Tooltip: "Replaced scanner metadata"
+- Display next to field label in FieldEditor
+
+---
+
+### Phase 6: Save/Discard Flow
+
+#### 6.1 Create SaveDiscardButtons Component
+- "Save All Changes" button (primary)
+- "Discard All" button (secondary/danger)
+- Disabled states when no pending changes
+- Count indicator: "X images modified"
+
+#### 6.2 Implement Save All
+1. Get all images with pending changes from store
+2. For each: call `writeExif` IPC with merged data
+3. Update image status in store (processing → success/error)
+4. Clear pending changes on success
+5. Show success/error summary
+
+#### 6.3 Implement Discard All
+1. Show confirmation dialog: "Discard changes to X images?"
+2. On confirm: call `discardAllChanges` in store
+3. Reset all pending changes to empty
+
+#### 6.4 Unsaved Changes Warning
+Create `useUnsavedChangesWarning` hook:
+- Listen to `beforeunload` event
+- If `hasUnsavedChanges`: show native dialog
+- Block close until confirmed
+
+Add Electron handler for window close:
+```typescript
+mainWindow.on('close', (e) => {
+  if (hasUnsavedChanges) {
+    e.preventDefault();
+    // Show dialog via IPC
+  }
+});
+```
+
+---
+
+### Phase 7: Visual Polish
+
+#### 7.1 Pending Changes Border
+In ImageCard CSS:
+```css
+.image-card--has-changes {
+  border: 2px solid var(--accent-color);
+}
+```
+
+#### 7.2 Loading States
+- Thumbnail: Spinner overlay on card
+- Save operation: Disable buttons, show progress
+
+#### 7.3 Keyboard Navigation
+- Tab order through sidebar fields
+- Enter in field: move to next field
+- Escape: blur current field
+- Global: Cmd+S to save all
+
+---
+
+## Type Updates
+
+```typescript
+// src/types.ts additions
+
+interface ImageFile {
+  // ... existing fields ...
+  thumbnail?: string;           // base64 data URL
+  thumbnailLoading?: boolean;
+  thumbnailError?: boolean;
+  hasScannerMetadata?: boolean;
+  scannerReplacedFields?: string[];  // ['make', 'model', etc.]
+}
+
+interface FieldDiff {
+  field: string;
+  existingValue: string | number | null;
+  pendingValue: string | number | null;
+  scannerReplaced: boolean;
+}
+```
+
+---
+
+## Testing Checklist
+
+### Per-Image Editing
+- [ ] Click image → opens in sidebar
+- [ ] Edit field → shows diff
+- [ ] Restore button → reverts to original
+- [ ] Multi-select → shows mixed state
+- [ ] Edit in multi-select → applies to all
+- [ ] Add field → shows dropdown, prefills from profile
+- [ ] Keyboard navigation works
+
+### Thumbnails
+- [ ] TIFF with embedded preview → shows thumbnail
+- [ ] JPG → shows thumbnail
+- [ ] File without preview → shows icon fallback
+- [ ] Loading state shows spinner
+- [ ] Cache enabled → faster on reload
+- [ ] Cache disabled → extracts every time
+
+### Bulk Date
+- [ ] Set date in multi-select → applies to all
+- [ ] Propagation follows filename order
+- [ ] Works with smart propagation
+
+### Conflict Resolution
+- [ ] Scanner image → auto-replaces scanner fields
+- [ ] Non-scanner image → preserves existing values
+- [ ] Scanner badge shows on replaced fields
+- [ ] Can override smart defaults manually
+
+### Save/Discard
+- [ ] Save All → writes to disk
+- [ ] Discard All → shows confirmation
+- [ ] Close with unsaved → shows warning
+- [ ] Pending changes → colored border on cards
+
+---
+
+## Migration Notes
+
+### Breaking Changes
+- None expected (additive features)
+
+### State Migration
+- Existing App.tsx state moves to Zustand
+- Profile state remains in App.tsx (or separate store later)
+- No user data migration needed
+
+### Performance Considerations
+- Thumbnail extraction is async, won't block UI
+- Large batches (100+ images): Consider virtualized grid
+- Cache helps with repeated sessions
+
+---
+
+## Future Enhancements (Out of Scope)
+
+- Time component handling for dates
+- Collapsible sidebar for narrow screens
+- Drag-and-drop field reordering
+- Undo/redo stack for individual edits
+- Image preview lightbox
+- Batch rename based on metadata
+
+---
+
+## Technical Implementation (Original Plan)
 
 ### Phase 1: Data Model Updates
 

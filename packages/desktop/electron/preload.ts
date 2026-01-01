@@ -85,6 +85,17 @@ export interface ElectronAPI {
   getProcessingLog: () => Promise<ProcessingLogEntry[]>
   addLogEntry: (entry: ProcessingLogEntry) => Promise<void>
   clearProcessingLog: () => Promise<void>
+
+  // Thumbnail extraction and caching
+  extractThumbnail: (filePath: string) => Promise<string | null>
+  getCacheSetting: () => Promise<boolean>
+  setCacheSetting: (enabled: boolean) => Promise<void>
+  getCachedThumbnail: (filePath: string) => Promise<string | null>
+  cacheThumbnail: (filePath: string, dataUrl: string) => Promise<boolean>
+
+  // Window management
+  forceCloseWindow: () => Promise<void>
+  onSaveBeforeClose: (callback: () => void) => () => void
 }
 
 const electronAPI: ElectronAPI = {
@@ -118,7 +129,22 @@ const electronAPI: ElectronAPI = {
   // Processing log
   getProcessingLog: () => ipcRenderer.invoke('get-processing-log'),
   addLogEntry: (entry: ProcessingLogEntry) => ipcRenderer.invoke('add-log-entry', entry),
-  clearProcessingLog: () => ipcRenderer.invoke('clear-processing-log')
+  clearProcessingLog: () => ipcRenderer.invoke('clear-processing-log'),
+
+  // Thumbnail extraction and caching
+  extractThumbnail: (filePath: string) => ipcRenderer.invoke('extract-thumbnail', filePath),
+  getCacheSetting: () => ipcRenderer.invoke('get-cache-setting'),
+  setCacheSetting: (enabled: boolean) => ipcRenderer.invoke('set-cache-setting', enabled),
+  getCachedThumbnail: (filePath: string) => ipcRenderer.invoke('get-cached-thumbnail', filePath),
+  cacheThumbnail: (filePath: string, dataUrl: string) => ipcRenderer.invoke('cache-thumbnail', filePath, dataUrl),
+
+  // Window management
+  forceCloseWindow: () => ipcRenderer.invoke('force-close-window'),
+  onSaveBeforeClose: (callback: () => void) => {
+    const listener = () => callback()
+    ipcRenderer.on('save-before-close', listener)
+    return () => ipcRenderer.removeListener('save-before-close', listener)
+  }
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

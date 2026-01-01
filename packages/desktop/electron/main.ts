@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
+import * as os from 'os'
+import * as crypto from 'crypto'
 import type Store from 'electron-store'
 import { ExifTool } from 'exiftool-vendored'
 import { geocodeLocation, GeocodingResult } from './geocoding'
@@ -30,6 +32,7 @@ interface StoreSchema {
   profiles: CameraProfile[]
   customValues: CustomValues
   processingLog: ProcessingLogEntry[]
+  thumbnailCacheEnabled: boolean
 }
 
 // Lazy-load electron-store to avoid module-level electron initialization
@@ -47,11 +50,27 @@ function getStore(): Store<StoreSchema> {
           shutterSpeeds: [],
           focalLengths: []
         },
-        processingLog: []
+        processingLog: [],
+        thumbnailCacheEnabled: true
       }
     })
   }
   return storeInstance!
+}
+
+// Thumbnail cache directory
+const THUMBNAIL_CACHE_DIR = path.join(os.tmpdir(), 'scancorrect-thumbs')
+
+// Ensure thumbnail cache directory exists
+function ensureThumbnailCacheDir(): void {
+  if (!fs.existsSync(THUMBNAIL_CACHE_DIR)) {
+    fs.mkdirSync(THUMBNAIL_CACHE_DIR, { recursive: true })
+  }
+}
+
+// Generate a hash for a file path to use as cache filename
+function getFilePathHash(filePath: string): string {
+  return crypto.createHash('sha256').update(filePath).digest('hex')
 }
 
 // Initialize ExifTool with proper configuration
@@ -69,6 +88,7 @@ interface CameraProfile {
 }
 
 let mainWindow: BrowserWindow | null = null
+let forceCloseWindow = false
 
 // Function to check dev mode - only call after app is ready
 function isDev(): boolean {
@@ -114,6 +134,42 @@ function createWindow(): void {
 
   mainWindow.on('closed', () => {
     mainWindow = null
+  })
+
+  // Handle close with unsaved changes warning
+  mainWindow.on('close', async (e) => {
+    if (forceCloseWindow) {
+      forceCloseWindow = false
+      return
+    }
+
+    // Ask renderer if there are unsaved changes
+    const hasUnsavedChanges = await mainWindow?.webContents.executeJavaScript(
+      'window.__hasUnsavedChanges ? window.__hasUnsavedChanges() : false'
+    ).catch(() => false)
+
+    if (hasUnsavedChanges) {
+      e.preventDefault()
+      const { response } = await dialog.showMessageBox(mainWindow!, {
+        type: 'warning',
+        buttons: ['Save & Close', 'Discard & Close', 'Cancel'],
+        defaultId: 2,
+        cancelId: 2,
+        title: 'Unsaved Changes',
+        message: 'You have unsaved changes.',
+        detail: 'Do you want to save your changes before closing?'
+      })
+
+      if (response === 0) {
+        // Save & Close - trigger save, then close
+        mainWindow?.webContents.send('save-before-close')
+      } else if (response === 1) {
+        // Discard & Close
+        forceCloseWindow = true
+        mainWindow?.close()
+      }
+      // response === 2: Cancel - do nothing
+    }
   })
 
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
@@ -206,6 +262,7 @@ async function editExifData(filePath: string, profile: CameraProfile): Promise<v
   }
 }
 
+
 ipcMain.handle('show-open-dialog', async (): Promise<string[] | undefined> => {
   if (!mainWindow) return undefined
 
@@ -217,6 +274,12 @@ ipcMain.handle('show-open-dialog', async (): Promise<string[] | undefined> => {
   })
 
   return result.canceled ? undefined : result.filePaths
+})
+
+// Force close window (called after save completes)
+ipcMain.handle('force-close-window', () => {
+  forceCloseWindow = true
+  mainWindow?.close()
 })
 
 // Geocoding handler
@@ -318,4 +381,75 @@ ipcMain.handle('add-log-entry', (_, entry: ProcessingLogEntry): void => {
 // Clear processing log
 ipcMain.handle('clear-processing-log', (): void => {
   getStore().set('processingLog', [])
+})
+
+// Thumbnail extraction and caching handlers
+
+// Extract thumbnail from image EXIF data
+ipcMain.handle('extract-thumbnail', async (_, filePath: string): Promise<string | null> => {
+  try {
+    const tags = await exiftool.read(filePath)
+    const thumbnailData = (tags as Record<string, unknown>).ThumbnailImage || (tags as Record<string, unknown>).PreviewImage
+
+    if (!thumbnailData) {
+      return null
+    }
+
+    let base64Data: string
+    const mimeType = 'image/jpeg'
+
+    if (Buffer.isBuffer(thumbnailData)) {
+      base64Data = thumbnailData.toString('base64')
+    } else if (typeof thumbnailData === 'string') {
+      base64Data = thumbnailData
+    } else {
+      return null
+    }
+
+    return `data:${mimeType};base64,${base64Data}`
+  } catch (error) {
+    console.error('Error extracting thumbnail:', error)
+    return null
+  }
+})
+
+// Get thumbnail cache enabled setting
+ipcMain.handle('get-cache-setting', (): boolean => {
+  return getStore().get('thumbnailCacheEnabled', true)
+})
+
+// Set thumbnail cache enabled setting
+ipcMain.handle('set-cache-setting', (_, enabled: boolean): void => {
+  getStore().set('thumbnailCacheEnabled', enabled)
+})
+
+// Get cached thumbnail from temp directory
+ipcMain.handle('get-cached-thumbnail', async (_, filePath: string): Promise<string | null> => {
+  try {
+    const hash = getFilePathHash(filePath)
+    const cachePath = path.join(THUMBNAIL_CACHE_DIR, `${hash}.txt`)
+
+    if (fs.existsSync(cachePath)) {
+      return fs.readFileSync(cachePath, 'utf-8')
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error reading cached thumbnail:', error)
+    return null
+  }
+})
+
+// Cache thumbnail to temp directory
+ipcMain.handle('cache-thumbnail', async (_, filePath: string, dataUrl: string): Promise<boolean> => {
+  try {
+    ensureThumbnailCacheDir()
+    const hash = getFilePathHash(filePath)
+    const cachePath = path.join(THUMBNAIL_CACHE_DIR, `${hash}.txt`)
+    fs.writeFileSync(cachePath, dataUrl, 'utf-8')
+    return true
+  } catch (error) {
+    console.error('Error caching thumbnail:', error)
+    return false
+  }
 })

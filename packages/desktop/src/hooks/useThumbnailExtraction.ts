@@ -1,0 +1,64 @@
+import { useState, useEffect } from 'react'
+import { useSettingsStore } from '../store'
+
+interface ThumbnailState {
+  thumbnail: string | null
+  loading: boolean
+  error: boolean
+}
+
+export function useThumbnailExtraction(filePath: string): ThumbnailState {
+  const [state, setState] = useState<ThumbnailState>({
+    thumbnail: null,
+    loading: true,
+    error: false
+  })
+  const { thumbnailCacheEnabled } = useSettingsStore()
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function extractThumbnail() {
+      setState({ thumbnail: null, loading: true, error: false })
+
+      try {
+        // Check cache first if enabled
+        if (thumbnailCacheEnabled) {
+          const cached = await window.electronAPI.getCachedThumbnail(filePath)
+          if (cached && !cancelled) {
+            setState({ thumbnail: cached, loading: false, error: false })
+            return
+          }
+        }
+
+        // Extract thumbnail
+        const thumbnail = await window.electronAPI.extractThumbnail(filePath)
+
+        if (cancelled) return
+
+        if (thumbnail) {
+          // Cache it if enabled
+          if (thumbnailCacheEnabled) {
+            await window.electronAPI.cacheThumbnail(filePath, thumbnail)
+          }
+          setState({ thumbnail, loading: false, error: false })
+        } else {
+          setState({ thumbnail: null, loading: false, error: false })
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error extracting thumbnail:', error)
+          setState({ thumbnail: null, loading: false, error: true })
+        }
+      }
+    }
+
+    extractThumbnail()
+
+    return () => {
+      cancelled = true
+    }
+  }, [filePath, thumbnailCacheEnabled])
+
+  return state
+}

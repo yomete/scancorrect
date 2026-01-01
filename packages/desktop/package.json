@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "7zip-bin": "^5.2.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
@@ -37,7 +38,8 @@
     "electron-store": "^8.2.0",
     "exiftool-vendored": "^30.4.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.9"
   },
   "build": {
     "appId": "com.scancorrect.app",
