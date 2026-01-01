@@ -40,8 +40,9 @@
     "react-dom": "^18.3.1"
   },
   "build": {
-    "appId": "com.filmexifeditor.app",
+    "appId": "com.scancorrect.app",
     "productName": "ScanCorrect",
+    "electronVersion": "31.0.2",
     "directories": {
       "output": "../../release",
       "app": "."
