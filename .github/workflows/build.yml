@@ -32,9 +32,10 @@ jobs:
         run: npm ci
 
       - name: Build desktop app
+        working-directory: packages/desktop
         run: |
-          npm run build -w desktop
-          npm run pack -w desktop
+          npm run build
+          npx electron-builder --dir
 
       - name: Upload build artifacts (for testing)
         uses: actions/upload-artifact@v4

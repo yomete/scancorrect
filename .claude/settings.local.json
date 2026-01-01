@@ -22,7 +22,8 @@
       "Bash(npx which:*)",
       "Bash(timeout 30 npm run dev:*)",
       "Bash(gtimeout 30 npm run dev:*)",
-      "Bash(./node_modules/.bin/electron -e \"console.log(''app:'', typeof require(''electron'').app, require(''electron''))\")"
+      "Bash(./node_modules/.bin/electron -e \"console.log(''app:'', typeof require(''electron'').app, require(''electron''))\")",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
