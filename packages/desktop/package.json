@@ -18,10 +18,11 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "7zip-bin": "^5.2.0",
+    "@types/mapbox-gl": "^3.4.1",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "7zip-bin": "^5.2.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
     "electron": "^31.0.2",
@@ -37,6 +38,8 @@
     "@iconify/react": "^6.0.0",
     "electron-store": "^8.2.0",
     "exiftool-vendored": "^30.4.0",
+    "fast-xml-parser": "^5.3.3",
+    "mapbox-gl": "^3.17.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^5.0.9"

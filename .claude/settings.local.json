@@ -25,7 +25,8 @@
       "Bash(./node_modules/.bin/electron -e \"console.log(''app:'', typeof require(''electron'').app, require(''electron''))\")",
       "Bash(grep:*)",
       "Bash(act push:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(npx vite:*)"
     ],
     "deny": [],
     "ask": []

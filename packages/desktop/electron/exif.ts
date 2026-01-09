@@ -17,6 +17,7 @@ export interface ExifData {
     longitude: number
   }
   dateOriginal?: string // YYYY-MM-DD format
+  dateTimeOriginal?: string // Full ISO timestamp YYYY-MM-DDTHH:mm:ss for GPX matching
 }
 
 export interface WriteResult {
@@ -109,16 +110,27 @@ export async function readExifData(
     const dateTime = tags.DateTimeOriginal
     // Handle ExifDateTime object from exiftool-vendored
     if (typeof dateTime === 'object' && 'year' in dateTime) {
-      const dt = dateTime as { year: number; month: number; day: number }
+      const dt = dateTime as { year: number; month: number; day: number; hour?: number; minute?: number; second?: number }
       const year = dt.year
       const month = String(dt.month).padStart(2, '0')
       const day = String(dt.day).padStart(2, '0')
       exifData.dateOriginal = `${year}-${month}-${day}`
+
+      // Also capture full timestamp for GPX matching
+      const hour = String(dt.hour ?? 12).padStart(2, '0')
+      const minute = String(dt.minute ?? 0).padStart(2, '0')
+      const second = String(dt.second ?? 0).padStart(2, '0')
+      exifData.dateTimeOriginal = `${year}-${month}-${day}T${hour}:${minute}:${second}`
     } else if (typeof dateTime === 'string') {
       // Handle string format "YYYY:MM:DD HH:MM:SS"
       const match = dateTime.match(/^(\d{4}):(\d{2}):(\d{2})/)
       if (match) {
         exifData.dateOriginal = `${match[1]}-${match[2]}-${match[3]}`
+      }
+      // Also capture full timestamp
+      const fullMatch = dateTime.match(/^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/)
+      if (fullMatch) {
+        exifData.dateTimeOriginal = `${fullMatch[1]}-${fullMatch[2]}-${fullMatch[3]}T${fullMatch[4]}:${fullMatch[5]}:${fullMatch[6]}`
       }
     }
   }

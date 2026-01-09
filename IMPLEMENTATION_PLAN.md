@@ -1198,3 +1198,211 @@ const FILM_FORMATS = [
 - All file operations through IPC handlers
 - Geocoding requests from main process (avoid CORS)
 - Preload script exposes only necessary methods
+
+---
+
+## Enhanced Location Tagging - Premium Features (January 2026)
+
+### Overview
+
+Added premium location tagging features to differentiate free/paid tiers in ScanCorrect. These features provide a compelling upgrade path for users who need advanced location workflows.
+
+### What Was Implemented
+
+#### Feature Tier System
+| Feature | Tier | Status |
+|---------|------|--------|
+| Location search (Nominatim) | Free | Existing |
+| Manual coordinates | Free | Existing |
+| Location history (recent 10) | Free | ✅ Implemented |
+| Saved locations (3 max) | Free | ✅ Implemented |
+| Saved locations (unlimited) | Paid | ✅ Implemented |
+| Interactive Mapbox map picker | Paid | ✅ Implemented |
+| GPX track import with time matching | Paid | ✅ Implemented |
+
+#### New Files Created
+
+**Feature System:**
+- `packages/desktop/src/features/featureFlags.ts` - Zustand store for tier management
+- `packages/desktop/src/components/FeatureGate/FeatureGate.tsx` - Component for gating paid features
+
+**Location Management:**
+- `packages/desktop/src/store/locationStore.ts` - Zustand store for saved locations & history
+- `packages/desktop/src/components/SavedLocations/SavedLocationsList.tsx`
+- `packages/desktop/src/components/SavedLocations/SavedLocationItem.tsx`
+
+**Map Picker (Paid Feature):**
+- `packages/desktop/electron/mapbox.ts` - Mapbox reverse geocoding
+- `packages/desktop/src/components/MapPicker/MapPicker.tsx` - Interactive Mapbox GL JS map
+- `packages/desktop/src/components/MapPicker/MapPickerModal.tsx`
+
+**GPX Import (Paid Feature):**
+- `packages/desktop/electron/gpx.ts` - GPX parsing & photo matching algorithm
+- `packages/desktop/src/components/GPXImport/GPXImportModal.tsx`
+- `packages/desktop/src/components/GPXImport/GPXMatchResults.tsx`
+
+**Enhanced LocationField:**
+- `packages/desktop/src/components/MetadataEditor/LocationFieldEnhanced.tsx` - All features integrated
+
+#### Modified Files
+- `packages/desktop/src/types.ts` - New type definitions for location features
+- `packages/desktop/electron/main.ts` - IPC handlers for saved locations, history, GPX, tier
+- `packages/desktop/electron/preload.ts` - Exposed new APIs to renderer
+- `packages/desktop/electron/exif.ts` - Full timestamp extraction (dateTimeOriginal) for GPX matching
+
+---
+
+### Remaining Steps to Complete
+
+#### 1. Mapbox API Token Configuration
+**Priority: High | Effort: Low**
+
+The Mapbox map picker requires an access token to function.
+
+- [ ] Create a Mapbox account and generate an access token at https://mapbox.com
+- [ ] Add `VITE_MAPBOX_TOKEN` to your `.env` file:
+  ```
+  VITE_MAPBOX_TOKEN=pk.your_mapbox_token_here
+  ```
+- [ ] For production builds, add the token to your CI/CD environment variables
+- [ ] Consider adding a user settings panel where users can input their own token
+
+#### 2. Integrate LocationFieldEnhanced into the App
+**Priority: High | Effort: Medium**
+
+Replace the existing `LocationField` with `LocationFieldEnhanced` to enable all new features.
+
+**Files to update:**
+- [ ] `packages/desktop/src/components/Sidebar/SingleImageEditor.tsx`
+  - Replace `LocationField` import with `LocationFieldEnhanced`
+  - Pass `onOpenGPXImport` callback prop
+- [ ] `packages/desktop/src/components/ProfileWizard/LocationStep.tsx`
+  - Replace `LocationField` with `LocationFieldEnhanced`
+- [ ] `packages/desktop/src/components/BulkActions/BulkLocationModal.tsx`
+  - Add "Pick on Map" and "From GPX" buttons using `FeatureButton`
+
+#### 3. Add GPX Import to Bulk Actions
+**Priority: High | Effort: Medium**
+
+Wire up the GPX import modal to the bulk action bar.
+
+- [ ] Add GPX import button to `BulkActionBar.tsx`:
+  ```tsx
+  <FeatureButton feature="gpxImport" onClick={() => setShowGPXModal(true)}>
+    <Icon icon="mdi:map-marker-path" /> Import GPX
+  </FeatureButton>
+  ```
+- [ ] Add `GPXImportModal` to App.tsx or parent component
+- [ ] Pass selected images with their `dateTimeOriginal` to the modal
+- [ ] Handle the `onApply` callback to update pending changes for matched images
+
+#### 4. Load User Tier from Storage
+**Priority: Medium | Effort: Low**
+
+Currently the tier defaults to 'free'. Connect it to persistent storage.
+
+- [ ] Add `useEffect` in App.tsx to load tier on startup:
+  ```tsx
+  useEffect(() => {
+    window.electronAPI.getUserTier().then(tier => {
+      useFeatureFlags.getState().setTier(tier)
+    })
+  }, [])
+  ```
+- [ ] Create a settings UI to toggle tier (for testing/development)
+- [ ] Eventually: integrate with license server or payment provider
+
+#### 5. Upgrade Prompts & CTAs
+**Priority: Medium | Effort: Medium**
+
+Make the upgrade prompts link to an actual upgrade flow.
+
+- [ ] Update `UpgradePrompt` in `FeatureGate.tsx` to include a real upgrade link
+- [ ] Decide on upgrade destination:
+  - Website pricing page
+  - In-app purchase (if using Electron's native purchasing)
+  - License key input modal
+- [ ] Track upgrade prompt impressions for analytics
+
+#### 6. Settings Panel for Mapbox Token
+**Priority: Low | Effort: Medium**
+
+Allow power users to provide their own Mapbox token.
+
+- [ ] Add "Location" section to app settings (if settings panel exists)
+- [ ] Input field for custom Mapbox token with "Test" button
+- [ ] Save custom token via `window.electronAPI.setMapboxToken()`
+- [ ] Show success/error feedback for token validation
+
+#### 7. Testing Checklist
+**Priority: High | Effort: Medium**
+
+- [ ] **Saved Locations**
+  - Save a location
+  - Toggle favorite
+  - Delete a location
+  - Verify 3-location limit for free tier
+  - Verify unlimited for paid tier
+
+- [ ] **Location History**
+  - Search for a location → appears in history
+  - Pick from map → appears in history
+  - Apply from GPX → appears in history
+  - History limited to 10 entries
+
+- [ ] **Map Picker (requires Mapbox token)**
+  - Modal opens correctly
+  - Click on map places marker
+  - Reverse geocode shows location name
+  - Apply button sets location value
+  - Locked behind paid tier gate
+
+- [ ] **GPX Import (requires test GPX file)**
+  - Import GPX file opens dialog
+  - Track is parsed correctly
+  - Time tolerance slider works
+  - Photo matching shows confidence levels
+  - Apply to selected images works
+  - Locked behind paid tier gate
+
+#### 8. Documentation Updates
+**Priority: Low | Effort: Low**
+
+- [ ] Update README.md with new features
+- [ ] Add section about free vs paid features
+- [ ] Document Mapbox token setup for developers
+- [ ] Add GPX import to feature list on website
+
+---
+
+### Quick Testing Commands
+
+```bash
+# Set tier to paid for testing all features
+# In browser console after app loads:
+useFeatureFlags.getState().setTier('paid')
+
+# Check current tier
+useFeatureFlags.getState().currentTier
+
+# Reset to free tier
+useFeatureFlags.getState().setTier('free')
+```
+
+### Dependencies Added
+
+```json
+{
+  "mapbox-gl": "^3.x",
+  "fast-xml-parser": "^4.x",
+  "@types/mapbox-gl": "^3.x" (dev)
+}
+```
+
+### Architecture Notes
+
+- **Feature flags** use Zustand for reactive state, stored in electron-store for persistence
+- **Saved locations** stored in electron-store, synced to Zustand on app load
+- **GPX matching** uses binary search for efficiency; timestamps must be in ISO format
+- **Mapbox** requires network access; falls back to coordinates-only if reverse geocode fails
+- **EXIF timestamps** now include full time component (`dateTimeOriginal`) for GPX matching

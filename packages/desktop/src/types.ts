@@ -93,3 +93,70 @@ export interface ProcessResult {
   success: boolean
   error?: string
 }
+
+// ============================================
+// Feature Flags & Tier System
+// ============================================
+
+export type FeatureTier = 'free' | 'paid'
+export type FeatureFlag = 'mapPicker' | 'gpxImport' | 'savedLocations' | 'locationHistory'
+
+// ============================================
+// Saved Locations
+// ============================================
+
+export interface SavedLocation extends LocationValue {
+  id: string
+  createdAt: string // ISO timestamp
+  usageCount: number
+  lastUsedAt?: string // ISO timestamp
+  isFavorite: boolean
+}
+
+// ============================================
+// Location History
+// ============================================
+
+export interface LocationHistoryEntry {
+  id: string
+  location: LocationValue
+  timestamp: string // ISO timestamp
+  source: 'search' | 'map' | 'gpx' | 'manual'
+}
+
+// ============================================
+// GPX Track Import
+// ============================================
+
+export interface GPXTrack {
+  id: string
+  name: string
+  importedAt: string // ISO timestamp
+  points: GPXTrackPoint[]
+}
+
+export interface GPXTrackPoint {
+  latitude: number
+  longitude: number
+  timestamp: string // ISO timestamp (required for matching)
+  elevation?: number
+}
+
+export interface GPXMatchResult {
+  imagePath: string
+  imageTimestamp: string // Full ISO timestamp from EXIF
+  matchedPoint?: GPXTrackPoint
+  matchedLocation?: LocationValue
+  timeDifferenceSeconds?: number
+  confidence: 'exact' | 'close' | 'far' | 'no_match'
+  manualOverride?: LocationValue
+}
+
+// ============================================
+// Mapbox Configuration
+// ============================================
+
+export interface MapboxConfig {
+  accessToken: string
+  style?: string // Default: 'mapbox://styles/mapbox/streets-v12'
+}

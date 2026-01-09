@@ -8,6 +8,7 @@ import { ExifTool } from 'exiftool-vendored'
 import { geocodeLocation, GeocodingResult } from './geocoding'
 import { readExifData, writeExifData, restoreFromBackup, ExifData } from './exif'
 import { isLikelyScannerMetadata } from './scanner-detection'
+import { parseGPX, matchPhotosToGPX, GPXMatchResult } from './gpx'
 
 interface CustomValues {
   isoValues: number[]
@@ -28,11 +29,50 @@ interface ProcessingLogEntry {
   backupPath?: string
 }
 
+interface SavedLocation {
+  id: string
+  name: string
+  latitude: number
+  longitude: number
+  createdAt: string
+  usageCount: number
+  lastUsedAt?: string
+  isFavorite: boolean
+}
+
+interface LocationHistoryEntry {
+  id: string
+  location: {
+    name: string
+    latitude: number
+    longitude: number
+  }
+  timestamp: string
+  source: 'search' | 'map' | 'gpx' | 'manual'
+}
+
+interface GPXTrack {
+  id: string
+  name: string
+  importedAt: string
+  points: Array<{
+    latitude: number
+    longitude: number
+    timestamp: string
+    elevation?: number
+  }>
+}
+
 interface StoreSchema {
   profiles: CameraProfile[]
   customValues: CustomValues
   processingLog: ProcessingLogEntry[]
   thumbnailCacheEnabled: boolean
+  savedLocations: SavedLocation[]
+  locationHistory: LocationHistoryEntry[]
+  gpxTracks: GPXTrack[]
+  userTier: 'free' | 'paid'
+  mapboxAccessToken?: string
 }
 
 // Lazy-load electron-store to avoid module-level electron initialization
@@ -51,7 +91,12 @@ function getStore(): Store<StoreSchema> {
           focalLengths: []
         },
         processingLog: [],
-        thumbnailCacheEnabled: true
+        thumbnailCacheEnabled: true,
+        savedLocations: [],
+        locationHistory: [],
+        gpxTracks: [],
+        userTier: 'free',
+        mapboxAccessToken: undefined
       }
     })
   }
@@ -451,5 +496,139 @@ ipcMain.handle('cache-thumbnail', async (_, filePath: string, dataUrl: string): 
   } catch (error) {
     console.error('Error caching thumbnail:', error)
     return false
+  }
+})
+
+// ============================================
+// Saved Locations IPC Handlers
+// ============================================
+
+ipcMain.handle('get-saved-locations', (): SavedLocation[] => {
+  return getStore().get('savedLocations', [])
+})
+
+ipcMain.handle('save-location', (_, location: SavedLocation): void => {
+  const locations = getStore().get('savedLocations', [])
+  const existingIndex = locations.findIndex(l => l.id === location.id)
+
+  if (existingIndex >= 0) {
+    locations[existingIndex] = location
+  } else {
+    locations.push(location)
+  }
+
+  getStore().set('savedLocations', locations)
+})
+
+ipcMain.handle('delete-saved-location', (_, locationId: string): void => {
+  const locations = getStore().get('savedLocations', [])
+  getStore().set('savedLocations', locations.filter(l => l.id !== locationId))
+})
+
+ipcMain.handle('increment-location-usage', (_, locationId: string): void => {
+  const locations = getStore().get('savedLocations', [])
+  const location = locations.find(l => l.id === locationId)
+  if (location) {
+    location.usageCount++
+    location.lastUsedAt = new Date().toISOString()
+    getStore().set('savedLocations', locations)
+  }
+})
+
+// ============================================
+// Location History IPC Handlers
+// ============================================
+
+ipcMain.handle('get-location-history', (): LocationHistoryEntry[] => {
+  return getStore().get('locationHistory', [])
+})
+
+ipcMain.handle('add-to-location-history', (_, entry: LocationHistoryEntry): void => {
+  const history = getStore().get('locationHistory', [])
+  history.unshift(entry)
+
+  // Keep only last 50 entries
+  if (history.length > 50) {
+    history.splice(50)
+  }
+
+  getStore().set('locationHistory', history)
+})
+
+ipcMain.handle('clear-location-history', (): void => {
+  getStore().set('locationHistory', [])
+})
+
+// ============================================
+// GPX Track IPC Handlers
+// ============================================
+
+ipcMain.handle('get-gpx-tracks', (): GPXTrack[] => {
+  return getStore().get('gpxTracks', [])
+})
+
+ipcMain.handle('save-gpx-track', (_, track: GPXTrack): void => {
+  const tracks = getStore().get('gpxTracks', [])
+  tracks.push(track)
+  getStore().set('gpxTracks', tracks)
+})
+
+ipcMain.handle('delete-gpx-track', (_, trackId: string): void => {
+  const tracks = getStore().get('gpxTracks', [])
+  getStore().set('gpxTracks', tracks.filter(t => t.id !== trackId))
+})
+
+ipcMain.handle('show-open-gpx-dialog', async (): Promise<{ filePath: string; content: string } | null> => {
+  if (!mainWindow) return null
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'GPX Files', extensions: ['gpx'] }]
+  })
+
+  if (result.canceled || !result.filePaths[0]) return null
+
+  const content = fs.readFileSync(result.filePaths[0], 'utf-8')
+  return { filePath: result.filePaths[0], content }
+})
+
+ipcMain.handle('parse-gpx', async (_, content: string): Promise<GPXTrack> => {
+  return parseGPX(content)
+})
+
+ipcMain.handle('match-photos-to-gpx', async (
+  _,
+  track: GPXTrack,
+  images: Array<{ path: string; timestamp: string }>,
+  toleranceSeconds: number
+): Promise<GPXMatchResult[]> => {
+  return matchPhotosToGPX(track, images, toleranceSeconds)
+})
+
+// ============================================
+// User Tier IPC Handlers
+// ============================================
+
+ipcMain.handle('get-user-tier', (): 'free' | 'paid' => {
+  return getStore().get('userTier', 'free')
+})
+
+ipcMain.handle('set-user-tier', (_, tier: 'free' | 'paid'): void => {
+  getStore().set('userTier', tier)
+})
+
+// ============================================
+// Mapbox Configuration IPC Handlers
+// ============================================
+
+ipcMain.handle('get-mapbox-token', (): string | undefined => {
+  return getStore().get('mapboxAccessToken')
+})
+
+ipcMain.handle('set-mapbox-token', (_, token: string | undefined): void => {
+  if (token) {
+    getStore().set('mapboxAccessToken', token)
+  } else {
+    getStore().delete('mapboxAccessToken')
   }
 })

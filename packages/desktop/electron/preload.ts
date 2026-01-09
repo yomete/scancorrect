@@ -58,6 +58,40 @@ interface ProcessingLogEntry {
   backupPath?: string
 }
 
+interface SavedLocation {
+  id: string
+  name: string
+  latitude: number
+  longitude: number
+  createdAt: string
+  usageCount: number
+  lastUsedAt?: string
+  isFavorite: boolean
+}
+
+interface LocationHistoryEntry {
+  id: string
+  location: {
+    name: string
+    latitude: number
+    longitude: number
+  }
+  timestamp: string
+  source: 'search' | 'map' | 'gpx' | 'manual'
+}
+
+interface GPXTrack {
+  id: string
+  name: string
+  importedAt: string
+  points: Array<{
+    latitude: number
+    longitude: number
+    timestamp: string
+    elevation?: number
+  }>
+}
+
 export interface ElectronAPI {
   // Existing profile methods
   getProfiles: () => Promise<CameraProfile[]>
@@ -96,6 +130,44 @@ export interface ElectronAPI {
   // Window management
   forceCloseWindow: () => Promise<void>
   onSaveBeforeClose: (callback: () => void) => () => void
+
+  // Saved Locations
+  getSavedLocations: () => Promise<SavedLocation[]>
+  saveLocation: (location: SavedLocation) => Promise<void>
+  deleteSavedLocation: (locationId: string) => Promise<void>
+  incrementLocationUsage: (locationId: string) => Promise<void>
+
+  // Location History
+  getLocationHistory: () => Promise<LocationHistoryEntry[]>
+  addToLocationHistory: (entry: LocationHistoryEntry) => Promise<void>
+  clearLocationHistory: () => Promise<void>
+
+  // GPX Tracks
+  getGPXTracks: () => Promise<GPXTrack[]>
+  saveGPXTrack: (track: GPXTrack) => Promise<void>
+  deleteGPXTrack: (trackId: string) => Promise<void>
+  showOpenGPXDialog: () => Promise<{ filePath: string; content: string } | null>
+  parseGPX: (content: string) => Promise<GPXTrack>
+  matchPhotosToGPX: (
+    track: GPXTrack,
+    images: Array<{ path: string; timestamp: string }>,
+    toleranceSeconds: number
+  ) => Promise<Array<{
+    imagePath: string
+    imageTimestamp: string
+    matchedPoint?: { latitude: number; longitude: number; timestamp: string; elevation?: number }
+    matchedLocation?: { name: string; latitude: number; longitude: number }
+    timeDifferenceSeconds?: number
+    confidence: 'exact' | 'close' | 'far' | 'no_match'
+  }>>
+
+  // User Tier
+  getUserTier: () => Promise<'free' | 'paid'>
+  setUserTier: (tier: 'free' | 'paid') => Promise<void>
+
+  // Mapbox Configuration
+  getMapboxToken: () => Promise<string | undefined>
+  setMapboxToken: (token: string | undefined) => Promise<void>
 }
 
 const electronAPI: ElectronAPI = {
@@ -144,7 +216,38 @@ const electronAPI: ElectronAPI = {
     const listener = () => callback()
     ipcRenderer.on('save-before-close', listener)
     return () => ipcRenderer.removeListener('save-before-close', listener)
-  }
+  },
+
+  // Saved Locations
+  getSavedLocations: () => ipcRenderer.invoke('get-saved-locations'),
+  saveLocation: (location: SavedLocation) => ipcRenderer.invoke('save-location', location),
+  deleteSavedLocation: (locationId: string) => ipcRenderer.invoke('delete-saved-location', locationId),
+  incrementLocationUsage: (locationId: string) => ipcRenderer.invoke('increment-location-usage', locationId),
+
+  // Location History
+  getLocationHistory: () => ipcRenderer.invoke('get-location-history'),
+  addToLocationHistory: (entry: LocationHistoryEntry) => ipcRenderer.invoke('add-to-location-history', entry),
+  clearLocationHistory: () => ipcRenderer.invoke('clear-location-history'),
+
+  // GPX Tracks
+  getGPXTracks: () => ipcRenderer.invoke('get-gpx-tracks'),
+  saveGPXTrack: (track: GPXTrack) => ipcRenderer.invoke('save-gpx-track', track),
+  deleteGPXTrack: (trackId: string) => ipcRenderer.invoke('delete-gpx-track', trackId),
+  showOpenGPXDialog: () => ipcRenderer.invoke('show-open-gpx-dialog'),
+  parseGPX: (content: string) => ipcRenderer.invoke('parse-gpx', content),
+  matchPhotosToGPX: (
+    track: GPXTrack,
+    images: Array<{ path: string; timestamp: string }>,
+    toleranceSeconds: number
+  ) => ipcRenderer.invoke('match-photos-to-gpx', track, images, toleranceSeconds),
+
+  // User Tier
+  getUserTier: () => ipcRenderer.invoke('get-user-tier'),
+  setUserTier: (tier: 'free' | 'paid') => ipcRenderer.invoke('set-user-tier', tier),
+
+  // Mapbox Configuration
+  getMapboxToken: () => ipcRenderer.invoke('get-mapbox-token'),
+  setMapboxToken: (token: string | undefined) => ipcRenderer.invoke('set-mapbox-token', token),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
