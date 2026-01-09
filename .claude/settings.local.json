@@ -26,7 +26,8 @@
       "Bash(grep:*)",
       "Bash(act push:*)",
       "Bash(mkdir:*)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(npm run test:*)"
     ],
     "deny": [],
     "ask": []

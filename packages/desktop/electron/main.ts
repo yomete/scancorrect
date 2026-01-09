@@ -63,6 +63,11 @@ interface GPXTrack {
   }>
 }
 
+interface MonthlyQuota {
+  count: number      // transformations used this month
+  monthKey: string   // "2025-01" format
+}
+
 interface StoreSchema {
   profiles: CameraProfile[]
   customValues: CustomValues
@@ -73,6 +78,7 @@ interface StoreSchema {
   gpxTracks: GPXTrack[]
   userTier: 'free' | 'paid'
   mapboxAccessToken?: string
+  monthlyQuota: MonthlyQuota
 }
 
 // Lazy-load electron-store to avoid module-level electron initialization
@@ -96,7 +102,8 @@ function getStore(): Store<StoreSchema> {
         locationHistory: [],
         gpxTracks: [],
         userTier: 'free',
-        mapboxAccessToken: undefined
+        mapboxAccessToken: undefined,
+        monthlyQuota: { count: 0, monthKey: '' }
       }
     })
   }
@@ -344,9 +351,26 @@ ipcMain.handle('read-exif', async (_, filePath: string): Promise<{ data: ExifDat
 })
 
 // Write EXIF data to file
-ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData, keepBackup: boolean = true): Promise<{ success: boolean; backupPath?: string; error?: string }> => {
+ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData, keepBackup: boolean = true): Promise<{ success: boolean; backupPath?: string; error?: string; quotaExceeded?: boolean }> => {
   try {
-    return await writeExifData(exiftool, filePath, data, keepBackup)
+    // Check quota before processing
+    const quotaState = getQuotaState()
+    if (!quotaState.canProcess) {
+      return {
+        success: false,
+        error: 'Monthly quota exceeded. Upgrade to Pro for unlimited processing.',
+        quotaExceeded: true
+      }
+    }
+
+    const result = await writeExifData(exiftool, filePath, data, keepBackup)
+
+    // Increment quota on successful write
+    if (result.success) {
+      incrementQuota(1)
+    }
+
+    return result
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error writing EXIF data' }
   }
@@ -615,6 +639,92 @@ ipcMain.handle('get-user-tier', (): 'free' | 'paid' => {
 
 ipcMain.handle('set-user-tier', (_, tier: 'free' | 'paid'): void => {
   getStore().set('userTier', tier)
+})
+
+// ============================================
+// Monthly Quota IPC Handlers
+// ============================================
+
+const FREE_TIER_MONTHLY_LIMIT = 108 // 3 rolls of 36 exposures
+
+function getCurrentMonthKey(): string {
+  return new Date().toISOString().slice(0, 7) // "2025-01" format
+}
+
+function getQuotaState(): { used: number; limit: number; remaining: number; canProcess: boolean; resetsAt: string } {
+  const tier = getStore().get('userTier', 'free')
+
+  if (tier === 'paid') {
+    return {
+      used: 0,
+      limit: Infinity,
+      remaining: Infinity,
+      canProcess: true,
+      resetsAt: ''
+    }
+  }
+
+  const quota = getStore().get('monthlyQuota', { count: 0, monthKey: '' })
+  const currentMonth = getCurrentMonthKey()
+
+  // Reset if new month
+  if (quota.monthKey !== currentMonth) {
+    getStore().set('monthlyQuota', { count: 0, monthKey: currentMonth })
+    return {
+      used: 0,
+      limit: FREE_TIER_MONTHLY_LIMIT,
+      remaining: FREE_TIER_MONTHLY_LIMIT,
+      canProcess: true,
+      resetsAt: getNextMonthResetDate()
+    }
+  }
+
+  const remaining = FREE_TIER_MONTHLY_LIMIT - quota.count
+  return {
+    used: quota.count,
+    limit: FREE_TIER_MONTHLY_LIMIT,
+    remaining: Math.max(0, remaining),
+    canProcess: remaining > 0,
+    resetsAt: getNextMonthResetDate()
+  }
+}
+
+function getNextMonthResetDate(): string {
+  const now = new Date()
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  return nextMonth.toISOString()
+}
+
+function incrementQuota(count: number): void {
+  const tier = getStore().get('userTier', 'free')
+  if (tier === 'paid') return // Don't track for paid users
+
+  const quota = getStore().get('monthlyQuota', { count: 0, monthKey: '' })
+  const currentMonth = getCurrentMonthKey()
+
+  if (quota.monthKey !== currentMonth) {
+    getStore().set('monthlyQuota', { count: count, monthKey: currentMonth })
+  } else {
+    getStore().set('monthlyQuota', { count: quota.count + count, monthKey: currentMonth })
+  }
+}
+
+ipcMain.handle('get-quota-status', (): { used: number; limit: number; remaining: number; canProcess: boolean; resetsAt: string } => {
+  return getQuotaState()
+})
+
+ipcMain.handle('check-can-process', (_, imageCount: number): { canProcess: boolean; remaining: number; wouldExceed: boolean } => {
+  const state = getQuotaState()
+
+  if (state.limit === Infinity) {
+    return { canProcess: true, remaining: Infinity, wouldExceed: false }
+  }
+
+  return {
+    canProcess: state.remaining > 0,
+    remaining: state.remaining,
+    wouldExceed: imageCount > state.remaining
+  }
 })
 
 // ============================================

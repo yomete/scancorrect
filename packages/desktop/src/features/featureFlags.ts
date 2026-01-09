@@ -20,6 +20,7 @@ const FEATURE_TIERS: Record<FeatureFlag, FeatureTier> = {
 export const FREE_TIER_LIMITS = {
   savedLocations: 3,
   historyEntries: 10,
+  monthlyTransformations: 108, // 3 rolls of 36 exposures
 }
 
 export const useFeatureFlags = create<FeatureFlagState>((set, get) => ({

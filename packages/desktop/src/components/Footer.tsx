@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { CameraProfile } from "../types";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { ProfileDropdown } from "./ProfileDropdown";
+import { QuotaStatus } from "./QuotaStatus";
 
 interface FooterProps {
   profiles: CameraProfile[];
@@ -11,6 +12,7 @@ interface FooterProps {
   onProfileSelect: (profileId: string) => void;
   onProfileDelete: (profileId: string) => void;
   onProfileEdit?: (profile: CameraProfile) => void;
+  onQuotaExhausted?: () => void;
 }
 
 export function Footer({
@@ -20,6 +22,7 @@ export function Footer({
   onProfileSelect,
   onProfileDelete,
   onProfileEdit,
+  onQuotaExhausted,
 }: FooterProps) {
   const getCurrentProfile = () => {
     return profiles.find((p) => p.id === selectedProfile);
@@ -50,6 +53,8 @@ export function Footer({
             </span>
           )}
         </div>
+
+        <QuotaStatus onQuotaExhausted={onQuotaExhausted} />
 
         <ThemeSwitcher />
 

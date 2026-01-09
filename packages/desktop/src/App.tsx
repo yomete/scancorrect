@@ -10,6 +10,7 @@ import {
   BulkLocationModal,
   ProcessingLog,
   ImageSidebar,
+  QuotaExhaustedModal,
 } from "./components";
 import {
   CameraProfile,
@@ -49,6 +50,9 @@ function App() {
 
   // Bulk location modal
   const [isBulkLocationOpen, setIsBulkLocationOpen] = useState(false);
+
+  // Quota exhausted modal
+  const [isQuotaExhaustedOpen, setIsQuotaExhaustedOpen] = useState(false);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -366,6 +370,13 @@ function App() {
           true // Keep backup
         );
 
+        // Check if quota was exceeded
+        if (writeResult.quotaExceeded) {
+          setIsQuotaExhaustedOpen(true);
+          setIsProcessing(false);
+          return; // Stop processing further images
+        }
+
         const logEntry: ProcessingLogEntry = {
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           timestamp: new Date(),
@@ -619,6 +630,7 @@ function App() {
         onProfileSelect={setSelectedProfile}
         onProfileDelete={handleDeleteProfile}
         onProfileEdit={handleEditProfile}
+        onQuotaExhausted={() => setIsQuotaExhaustedOpen(true)}
       />
 
       {/* Profile Wizard Modal */}
@@ -650,6 +662,12 @@ function App() {
         onUndo={handleUndo}
         isOpen={isLogOpen}
         onClose={() => setIsLogOpen(false)}
+      />
+
+      {/* Quota Exhausted Modal */}
+      <QuotaExhaustedModal
+        isOpen={isQuotaExhaustedOpen}
+        onClose={() => setIsQuotaExhaustedOpen(false)}
       />
     </div>
   );

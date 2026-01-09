@@ -105,7 +105,7 @@ export interface ElectronAPI {
 
   // EXIF reading and writing
   readExif: (filePath: string) => Promise<{ data: ExifData; isScanner: boolean } | { error: string }>
-  writeExif: (filePath: string, data: ExifData, keepBackup?: boolean) => Promise<{ success: boolean; backupPath?: string; error?: string }>
+  writeExif: (filePath: string, data: ExifData, keepBackup?: boolean) => Promise<{ success: boolean; backupPath?: string; error?: string; quotaExceeded?: boolean }>
 
   // Backup management
   restoreBackup: (filePath: string, backupPath: string) => Promise<{ success: boolean; error?: string }>
@@ -164,6 +164,20 @@ export interface ElectronAPI {
   // User Tier
   getUserTier: () => Promise<'free' | 'paid'>
   setUserTier: (tier: 'free' | 'paid') => Promise<void>
+
+  // Monthly Quota
+  getQuotaStatus: () => Promise<{
+    used: number
+    limit: number
+    remaining: number
+    canProcess: boolean
+    resetsAt: string
+  }>
+  checkCanProcess: (imageCount: number) => Promise<{
+    canProcess: boolean
+    remaining: number
+    wouldExceed: boolean
+  }>
 
   // Mapbox Configuration
   getMapboxToken: () => Promise<string | undefined>
@@ -244,6 +258,10 @@ const electronAPI: ElectronAPI = {
   // User Tier
   getUserTier: () => ipcRenderer.invoke('get-user-tier'),
   setUserTier: (tier: 'free' | 'paid') => ipcRenderer.invoke('set-user-tier', tier),
+
+  // Monthly Quota
+  getQuotaStatus: () => ipcRenderer.invoke('get-quota-status'),
+  checkCanProcess: (imageCount: number) => ipcRenderer.invoke('check-can-process', imageCount),
 
   // Mapbox Configuration
   getMapboxToken: () => ipcRenderer.invoke('get-mapbox-token'),
