@@ -27,32 +27,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Debug 7zip-bin (before fix)
-        run: |
-          echo "Checking root node_modules/7zip-bin:"
-          ls -laR node_modules/7zip-bin/ 2>/dev/null || echo "Not found in root"
-          echo "Checking packages/desktop/node_modules/7zip-bin:"
-          ls -laR packages/desktop/node_modules/7zip-bin/ 2>/dev/null || echo "Not found in desktop"
-        shell: bash
+      - name: Install system 7zip (macOS)
+        if: runner.os == 'macOS'
+        run: brew install p7zip
 
-      - name: Reinstall 7zip-bin to ensure binaries are present
-        run: |
-          npm install 7zip-bin@5.2.0 --no-save
-          echo "After reinstall:"
-          ls -laR node_modules/7zip-bin/ 2>/dev/null || echo "Still not found"
-        shell: bash
-
-      - name: Fix 7zip-bin permissions
-        if: runner.os != 'Windows'
-        run: |
-          find . -path "*/7zip-bin/*/7za" -type f -exec chmod +x {} \; 2>/dev/null || true
-        shell: bash
+      - name: Install system 7zip (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full
 
       - name: Build desktop app
         run: |
           npm run build -w desktop
           npm run dist -w desktop
         env:
+          # Use system 7za instead of bundled (avoids permission issues)
+          USE_SYSTEM_7ZA: true
           # Required for macOS code signing (optional, but recommended)
           CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
