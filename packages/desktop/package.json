@@ -48,6 +48,7 @@
     "appId": "com.scancorrect.app",
     "productName": "ScanCorrect",
     "electronVersion": "31.0.2",
+    "npmRebuild": false,
     "directories": {
       "output": "../../release",
       "app": "."
