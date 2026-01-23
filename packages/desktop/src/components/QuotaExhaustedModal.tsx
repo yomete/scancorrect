@@ -5,11 +5,15 @@ import { FREE_TIER_LIMITS } from "../features/featureFlags";
 interface QuotaExhaustedModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenLicenseModal: () => void;
 }
+
+const POLAR_CHECKOUT_URL = "https://polar.sh/scancorrect/ScanCorrect-Pro";
 
 export function QuotaExhaustedModal({
   isOpen,
   onClose,
+  onOpenLicenseModal,
 }: QuotaExhaustedModalProps) {
   const [resetsAt, setResetsAt] = useState<string>("");
   const [daysUntilReset, setDaysUntilReset] = useState(0);
@@ -123,14 +127,24 @@ export function QuotaExhaustedModal({
             </button>
             <button
               onClick={() => {
-                // TODO: Open upgrade link when Lemon Squeezy is integrated
-                alert(
-                  "Upgrade coming soon! For now, your quota will reset on the 1st of next month."
-                );
+                window.open(POLAR_CHECKOUT_URL, "_blank");
               }}
               className="flex-1 px-4 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg font-medium transition-all shadow-lg shadow-blue-500/25"
             >
               Upgrade to Pro - €25
+            </button>
+          </div>
+
+          {/* Already have a license */}
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => {
+                onClose();
+                onOpenLicenseModal();
+              }}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Already have a license key? Activate it here
             </button>
           </div>
         </div>

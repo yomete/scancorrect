@@ -9,6 +9,14 @@ import { geocodeLocation, GeocodingResult } from './geocoding'
 import { readExifData, writeExifData, restoreFromBackup, ExifData } from './exif'
 import { isLikelyScannerMetadata } from './scanner-detection'
 import { parseGPX, matchPhotosToGPX, GPXMatchResult } from './gpx'
+import {
+  LicenseStatus,
+  validateLicenseKey,
+  activateLicense,
+  deactivateLicense,
+  calculateOfflineGraceEnd,
+  isWithinOfflineGrace,
+} from './license'
 
 interface CustomValues {
   isoValues: number[]
@@ -79,6 +87,7 @@ interface StoreSchema {
   userTier: 'free' | 'paid'
   mapboxAccessToken?: string
   monthlyQuota: MonthlyQuota
+  licenseStatus?: LicenseStatus
 }
 
 // Lazy-load electron-store to avoid module-level electron initialization
@@ -741,4 +750,133 @@ ipcMain.handle('set-mapbox-token', (_, token: string | undefined): void => {
   } else {
     getStore().delete('mapboxAccessToken')
   }
+})
+
+// ============================================
+// License Management IPC Handlers
+// ============================================
+
+ipcMain.handle('activate-license', async (_, licenseKey: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    // First validate the key
+    const validation = await validateLicenseKey(licenseKey)
+    if (!validation.valid) {
+      return { success: false, error: validation.error }
+    }
+
+    // Then activate on this machine
+    const activation = await activateLicense(licenseKey)
+    if (!activation.success) {
+      return { success: false, error: activation.error }
+    }
+
+    // Store license and update tier
+    const licenseStatus: LicenseStatus = {
+      key: licenseKey,
+      valid: true,
+      activationId: activation.activationId,
+      machineName: activation.machineName,
+      activatedAt: new Date().toISOString(),
+      lastValidatedAt: new Date().toISOString(),
+      offlineGracePeriodEnd: calculateOfflineGraceEnd(),
+    }
+
+    getStore().set('licenseStatus', licenseStatus)
+    getStore().set('userTier', 'paid')
+
+    return { success: true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error activating license'
+    }
+  }
+})
+
+ipcMain.handle('get-license-status', (): LicenseStatus | null => {
+  const status = getStore().get('licenseStatus')
+  return status ?? null
+})
+
+ipcMain.handle('deactivate-license', async (): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const licenseStatus = getStore().get('licenseStatus') as LicenseStatus | undefined
+
+    if (!licenseStatus?.key || !licenseStatus?.activationId) {
+      // No license to deactivate, just clear local state
+      getStore().delete('licenseStatus')
+      getStore().set('userTier', 'free')
+      return { success: true }
+    }
+
+    // Deactivate with Polar
+    const result = await deactivateLicense(licenseStatus.key, licenseStatus.activationId)
+
+    // Clear local state regardless of API result
+    getStore().delete('licenseStatus')
+    getStore().set('userTier', 'free')
+
+    if (!result.success) {
+      // License cleared locally but API failed - this is okay
+      console.warn('License deactivation API failed:', result.error)
+    }
+
+    return { success: true }
+  } catch (error) {
+    // Clear local state even on error
+    getStore().delete('licenseStatus')
+    getStore().set('userTier', 'free')
+    return { success: true }
+  }
+})
+
+ipcMain.handle('validate-license-online', async (): Promise<{ valid: boolean; error?: string }> => {
+  const licenseStatus = getStore().get('licenseStatus') as LicenseStatus | undefined
+
+  if (!licenseStatus?.key) {
+    return { valid: false, error: 'No license key stored' }
+  }
+
+  const result = await validateLicenseKey(licenseStatus.key)
+
+  if (result.valid) {
+    // Update last validated time and extend grace period
+    getStore().set('licenseStatus', {
+      ...licenseStatus,
+      lastValidatedAt: new Date().toISOString(),
+      offlineGracePeriodEnd: calculateOfflineGraceEnd(),
+    })
+    return { valid: true }
+  }
+
+  // Check offline grace period
+  if (isWithinOfflineGrace(licenseStatus.offlineGracePeriodEnd)) {
+    return { valid: true }
+  }
+
+  // Grace period expired - revoke
+  getStore().delete('licenseStatus')
+  getStore().set('userTier', 'free')
+  return { valid: false, error: result.error || 'License validation failed' }
+})
+
+// ============================================
+// Dev Testing IPC Handlers (dev mode only)
+// ============================================
+
+ipcMain.handle('dev-reset-license', (): void => {
+  if (!isDev()) return
+  getStore().delete('licenseStatus')
+  getStore().set('userTier', 'free')
+  getStore().set('monthlyQuota', { count: 0, monthKey: getCurrentMonthKey() })
+})
+
+ipcMain.handle('dev-exhaust-quota', (): void => {
+  if (!isDev()) return
+  getStore().set('monthlyQuota', { count: FREE_TIER_MONTHLY_LIMIT, monthKey: getCurrentMonthKey() })
+})
+
+ipcMain.handle('dev-set-paid', (): void => {
+  if (!isDev()) return
+  getStore().set('userTier', 'paid')
 })

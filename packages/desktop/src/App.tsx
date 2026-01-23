@@ -12,6 +12,7 @@ import {
   ImageSidebar,
   QuotaExhaustedModal,
 } from "./components";
+import { LicenseModal } from "./components/LicenseActivation";
 import {
   CameraProfile,
   ImageFile,
@@ -53,6 +54,9 @@ function App() {
 
   // Quota exhausted modal
   const [isQuotaExhaustedOpen, setIsQuotaExhaustedOpen] = useState(false);
+
+  // License modal
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -668,6 +672,17 @@ function App() {
       <QuotaExhaustedModal
         isOpen={isQuotaExhaustedOpen}
         onClose={() => setIsQuotaExhaustedOpen(false)}
+        onOpenLicenseModal={() => setIsLicenseModalOpen(true)}
+      />
+
+      {/* License Activation Modal */}
+      <LicenseModal
+        isOpen={isLicenseModalOpen}
+        onClose={() => setIsLicenseModalOpen(false)}
+        onActivated={() => {
+          // Refresh quota status after activation
+          setIsQuotaExhaustedOpen(false);
+        }}
       />
     </div>
   );

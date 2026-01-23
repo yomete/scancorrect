@@ -3,92 +3,104 @@
 ## Current Status: Quota System ✅ Complete
 
 The monthly quota system for the free tier is implemented:
+
 - **108 transformations/month** (3 rolls of 36 exposures)
 - **Calendar month reset** (1st of each month)
 - **Hard block** when exhausted with upgrade modal
 - **UI indicator** in footer showing usage
 
-## Next: Lemon Squeezy Integration
+## Next: Polar.sh Integration
 
-### Why Lemon Squeezy?
+### Why Polar?
 
-| Feature | Lemon Squeezy |
-|---------|---------------|
-| Fees | 5% + $0.50 per transaction |
-| License keys | Built-in |
-| Tax handling | Full MoR (EU VAT, global) |
-| Approval time | ~48 hours |
-| Acquired by | Stripe (July 2024) |
+| Feature      | Polar                       |
+| ------------ | --------------------------- |
+| Fees         | ~4% + payment processing    |
+| License keys | Built-in                    |
+| Tax handling | Full MoR (EU VAT, global)   |
+| Next.js SDK  | Official `@polar-sh/nextjs` |
+| Focus        | Developer tools & software  |
 
-On a €25 sale, you net ~€23.25 after fees.
+On a €25 sale, you net ~€24 after fees.
 
-### Step 1: Create Lemon Squeezy Account
+### Step 1: Create Polar Account
 
-1. Go to [lemonsqueezy.com](https://lemonsqueezy.com)
+1. Go to [polar.sh](https://polar.sh)
 2. Sign up and verify your account
-3. Complete business verification (may take 24-48 hours)
+3. Complete organization setup
 
 ### Step 2: Create Product
 
-1. Create a new Store (or use default)
-2. Add Product:
+1. Create a new Product:
    - **Name:** ScanCorrect Pro - Lifetime License
    - **Price:** €25 (one-time)
-   - **Type:** Software License
-3. Configure License Key settings:
+   - **Type:** One-time purchase
+2. Add a License Key benefit:
    - Activation limit: 3 (allows 3 machines)
-   - Key format: Default or custom
-4. Note down:
-   - Product ID
-   - Variant ID
-   - Store ID
+3. Note down:
+   - Product ID - 61bbb3cd-b448-4cc6-b4d9-35c56a9bec3f
+   - Organization ID - b9f91173-37e0-4b89-9acb-0cb4f66ad64c
 
 ### Step 3: Get API Credentials
 
-1. Go to Settings → API
-2. Create an API key with these scopes:
-   - `licenses:read`
-   - `licenses:validate`
-   - `licenses:activate`
-   - `licenses:deactivate`
-3. Note down:
-   - API Key
-   - Webhook signing secret (create a webhook endpoint)
+1. Go to Settings → Developers → Access Tokens
+2. Create an API token with these scopes:
+   - `license_keys:read`
+   - `license_keys:write`
+   - `products:read`
+   - `checkouts:read`
+   - `orders:read`
+   - `webhooks:read` (optional, for webhooks)
+   - `webhooks:write` (optional)
+   - `customers:read` (optional, for customer portal)
+3. Create a webhook endpoint and note the signing secret
+- endpoint: https://scancorrect.com/api/webhook/polar
+- signing secret: polar_whs_FzodHrP5x4ua3PCFlZ92DvvGk9oHY81rjAI1q2D1U6I
 
 ### Step 4: Implementation Tasks
 
 #### 4.1 License Validation Module
+
 Create `packages/desktop/electron/license.ts`:
-- Validate license key against Lemon Squeezy API
+
+- Validate license key against Polar API
 - Activate/deactivate license on machine
 - Handle offline grace period (7 days suggested)
 - Store license locally in electron-store
 
 #### 4.2 IPC Handlers
+
 Add to `packages/desktop/electron/main.ts`:
+
 - `activate-license` - Validate and activate license key
 - `get-license-status` - Return current license state
 - `deactivate-license` - For transferring to another machine
 
 #### 4.3 License Activation UI
+
 Create `packages/desktop/src/components/LicenseActivation/`:
+
 - `LicenseActivationModal.tsx` - Enter license key form
 - `LicenseStatus.tsx` - Show current license status in settings
 
 #### 4.4 Upgrade Flow
+
 Update `packages/desktop/src/components/QuotaExhaustedModal.tsx`:
-- Link "Upgrade to Pro" button to Lemon Squeezy checkout URL
-- Or embed Lemon Squeezy checkout overlay
+
+- Link "Upgrade to Pro" button to Polar checkout URL
+- Or embed Polar checkout overlay
 
 #### 4.5 Website Updates
+
 Update `packages/website/`:
-- Change pricing to €25 lifetime only (remove monthly)
-- Add "Buy Now" button linking to Lemon Squeezy checkout
-- Add license activation instructions
+
+- Add Polar Next.js adapter for checkout
+- Add webhook handler for order events
+- Update pricing section with "Buy Now" button
 
 ### Step 5: Testing
 
-1. Create a test product in Lemon Squeezy (sandbox mode)
+1. Use Polar sandbox mode for testing
 2. Generate test license keys
 3. Test activation/deactivation flow
 4. Test offline grace period
@@ -97,64 +109,123 @@ Update `packages/website/`:
 ## API Reference
 
 ### Validate License Key
+
 ```bash
-curl -X POST https://api.lemonsqueezy.com/v1/licenses/validate \
-  -H "Accept: application/json" \
+curl -X POST https://api.polar.sh/v1/license-keys/validate \
+  -H "Authorization: Bearer $POLAR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"license_key": "YOUR_LICENSE_KEY"}'
+  -d '{
+    "key": "YOUR_LICENSE_KEY",
+    "organization_id": "YOUR_ORG_ID"
+  }'
 ```
 
 ### Activate License
+
 ```bash
-curl -X POST https://api.lemonsqueezy.com/v1/licenses/activate \
-  -H "Accept: application/json" \
+curl -X POST https://api.polar.sh/v1/license-keys/activate \
+  -H "Authorization: Bearer $POLAR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "license_key": "YOUR_LICENSE_KEY",
-    "instance_name": "MacBook Pro"
+    "key": "YOUR_LICENSE_KEY",
+    "organization_id": "YOUR_ORG_ID",
+    "label": "MacBook Pro"
   }'
 ```
 
 ### Deactivate License
+
 ```bash
-curl -X POST https://api.lemonsqueezy.com/v1/licenses/deactivate \
-  -H "Accept: application/json" \
+curl -X POST https://api.polar.sh/v1/license-keys/deactivate \
+  -H "Authorization: Bearer $POLAR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "license_key": "YOUR_LICENSE_KEY",
-    "instance_id": "INSTANCE_ID"
+    "key": "YOUR_LICENSE_KEY",
+    "organization_id": "YOUR_ORG_ID",
+    "activation_id": "ACTIVATION_ID"
   }'
+```
+
+## Website Integration (Next.js)
+
+### Install Dependencies
+
+```bash
+cd packages/website
+npm install zod @polar-sh/nextjs
+```
+
+### Checkout Route
+
+Create `app/api/checkout/route.ts`:
+
+```typescript
+import { Checkout } from "@polar-sh/nextjs";
+
+export const GET = Checkout({
+  accessToken: process.env.POLAR_ACCESS_TOKEN!,
+  successUrl: process.env.POLAR_SUCCESS_URL!,
+  server: "production", // or "sandbox" for testing
+});
+```
+
+### Webhook Handler
+
+Create `app/api/webhook/polar/route.ts`:
+
+```typescript
+import { Webhooks } from "@polar-sh/nextjs";
+
+export const POST = Webhooks({
+  webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
+  onOrderPaid: async (payload) => {
+    // License key is automatically generated by Polar
+    // Customer receives it via email
+    console.log("Order paid:", payload.data.id);
+  },
+});
 ```
 
 ## Files to Create/Modify
 
-| File | Purpose |
-|------|---------|
-| `electron/license.ts` | License validation logic |
-| `electron/main.ts` | Add license IPC handlers |
-| `electron/preload.ts` | Expose license methods |
-| `src/components/LicenseActivation/` | Activation UI |
-| `src/components/QuotaExhaustedModal.tsx` | Connect upgrade button |
-| `packages/website/app/page.tsx` | Update pricing section |
+| File                                              | Purpose                  |
+| ------------------------------------------------- | ------------------------ |
+| `electron/license.ts`                             | License validation logic |
+| `electron/main.ts`                                | Add license IPC handlers |
+| `electron/preload.ts`                             | Expose license methods   |
+| `src/components/LicenseActivation/`               | Activation UI            |
+| `src/components/QuotaExhaustedModal.tsx`          | Connect upgrade button   |
+| `packages/website/app/api/checkout/route.ts`      | Polar checkout           |
+| `packages/website/app/api/webhook/polar/route.ts` | Webhook handler          |
+| `packages/website/app/page.tsx`                   | Update pricing section   |
 
-## Environment Variables (for builds)
+## Environment Variables
+
+### Desktop App (build-time)
 
 ```env
-LEMON_SQUEEZY_API_KEY=your_api_key
-LEMON_SQUEEZY_STORE_ID=your_store_id
-LEMON_SQUEEZY_PRODUCT_ID=your_product_id
-LEMON_SQUEEZY_CHECKOUT_URL=https://yourstore.lemonsqueezy.com/checkout/buy/xxx
+POLAR_CHECKOUT_URL=https://polar.sh/checkout/YOUR_ORG/YOUR_PRODUCT
+```
+
+### Website
+
+```env
+POLAR_ACCESS_TOKEN=your_api_token
+POLAR_WEBHOOK_SECRET=your_webhook_secret
+POLAR_SUCCESS_URL=https://scancorrect.app/success?checkout_id={CHECKOUT_ID}
 ```
 
 ## Timeline Checklist
 
-- [ ] Create Lemon Squeezy account
-- [ ] Set up product and license keys
-- [ ] Get API credentials
+- [ ] Create Polar account
+- [ ] Set up product with license key benefit
+- [ ] Get API credentials (token + webhook secret)
 - [ ] Implement license validation module
 - [ ] Add IPC handlers
 - [ ] Create activation UI
 - [ ] Connect upgrade button
+- [ ] Add website checkout route
+- [ ] Add webhook handler
 - [ ] Update website pricing
 - [ ] Test full purchase → activation flow
 - [ ] Ship!
