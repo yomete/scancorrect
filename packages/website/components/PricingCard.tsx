@@ -23,10 +23,10 @@ export default function PricingCard({
 }: PricingCardProps) {
   return (
     <div
-      className={`relative p-8 border rounded-lg transition-all duration-300 ${
+      className={`relative p-8 rounded-lg transition-shadow duration-300 ${
         highlighted
-          ? 'border-black shadow-xl scale-105'
-          : 'border-gray-200 hover:shadow-lg'
+          ? 'shadow-[0_20px_40px_rgba(0,0,0,0.12),0_8px_16px_rgba(0,0,0,0.08)] scale-105'
+          : 'shadow-[0_1px_3px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_25px_rgba(0,0,0,0.08),0_4px_10px_rgba(0,0,0,0.04)]'
       } bg-white`}
     >
       {badge && (
@@ -68,7 +68,7 @@ export default function PricingCard({
 
       <button
         onClick={ctaAction}
-        className={`w-full py-3 px-6 rounded-lg font-bold transition-all duration-300 ${
+        className={`w-full py-3 px-6 rounded-lg font-bold transition-[background-color,color,transform] duration-300 active:scale-[0.96] ${
           highlighted
             ? 'bg-black text-white hover:bg-gray-800'
             : 'bg-white text-black border-2 border-black hover:bg-black hover:text-white'

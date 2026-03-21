@@ -48,7 +48,7 @@ export function MergeConflict({
         {/* Existing Value Option */}
         <label
           className={`
-            relative flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-all
+            relative flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-[border-color,background-color]
             ${
               choice === "keep"
                 ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
@@ -116,7 +116,7 @@ export function MergeConflict({
         {/* New Value Option */}
         <label
           className={`
-            relative flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-all
+            relative flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-[border-color,background-color]
             ${
               choice === "overwrite"
                 ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"

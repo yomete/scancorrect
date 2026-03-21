@@ -56,7 +56,7 @@ export function QuotaExhaustedModal({
               />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-white [text-wrap:balance]">
                 Monthly Limit Reached
               </h2>
               <p className="text-white/80 text-sm">
@@ -74,7 +74,7 @@ export function QuotaExhaustedModal({
               <Icon icon="material-symbols:calendar-month" className="w-5 h-5" />
               <span>
                 Your quota resets in{" "}
-                <strong className="text-gray-900 dark:text-white">
+                <strong className="text-gray-900 dark:text-white tabular-nums">
                   {daysUntilReset} day{daysUntilReset !== 1 ? "s" : ""}
                 </strong>
               </span>
@@ -121,7 +121,7 @@ export function QuotaExhaustedModal({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 rounded-lg font-medium transition-colors"
+              className="flex-1 px-4 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 rounded-lg font-medium transition-[background-color,transform] active:scale-[0.96]"
             >
               Wait for Reset
             </button>
@@ -129,7 +129,7 @@ export function QuotaExhaustedModal({
               onClick={() => {
                 window.open(POLAR_CHECKOUT_URL, "_blank");
               }}
-              className="flex-1 px-4 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg font-medium transition-all shadow-lg shadow-blue-500/25"
+              className="flex-1 px-4 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg font-medium transition-[background-color,transform] active:scale-[0.96] shadow-lg shadow-blue-500/25"
             >
               Upgrade to Pro - €25
             </button>

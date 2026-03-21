@@ -116,7 +116,7 @@ export function ImageGrid({
             </span>
           </label>
           {selectedIds.size > 0 && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
               ({selectedIds.size} of {images.length} selected)
             </span>
           )}
@@ -124,7 +124,7 @@ export function ImageGrid({
 
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <Icon icon="mdi:sort-alphabetical-ascending" className="w-4 h-4" />
-          <span>{images.length} {images.length === 1 ? "image" : "images"}</span>
+          <span className="tabular-nums">{images.length} {images.length === 1 ? "image" : "images"}</span>
         </div>
       </div>
 

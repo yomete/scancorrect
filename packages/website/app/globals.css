@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
 @utility font-fjalla {
   font-family: var(--font-fjalla), sans-serif;
 }

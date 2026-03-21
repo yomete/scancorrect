@@ -126,7 +126,8 @@ export function ImageCard({
       onClick={onClick}
       className={`
         relative flex flex-col p-3 rounded-lg border-2 cursor-pointer
-        transition-all duration-150
+        transition-[border-color,background-color,transform] duration-150
+        active:scale-[0.96]
         ${getBorderClass()}
       `}
     >
@@ -167,7 +168,7 @@ export function ImageCard({
           <img
             src={thumbnail}
             alt={image.filename}
-            className="max-h-[80px] max-w-full object-contain rounded"
+            className="max-h-[80px] max-w-full object-contain rounded outline outline-1 outline-black/10 dark:outline-white/10"
           />
         ) : (
           <Icon

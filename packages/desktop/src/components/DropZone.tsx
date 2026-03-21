@@ -27,7 +27,7 @@ export function DropZone({
 }: DropZoneProps) {
   return (
     <div
-      className={`h-full w-full bg-white dark:bg-neutral-700 flex items-center justify-center cursor-pointer transition-all duration-300 relative ${
+      className={`h-full w-full bg-white dark:bg-neutral-700 flex items-center justify-center cursor-pointer transition-colors duration-300 relative ${
         isDragOver
           ? "bg-blue-50 dark:bg-blue-900"
           : "hover:bg-blue-50 dark:hover:bg-blue-900"

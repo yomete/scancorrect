@@ -146,7 +146,7 @@ export function ProfileWizard({
         {/* Header with step indicator */}
         <div className="flex flex-col border-b border-gray-100 dark:border-gray-700">
           <div className="flex justify-between items-center p-5 px-6">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 [text-wrap:balance]">
               {editingProfile ? "Edit Profile" : "Create Profile"}
             </h2>
             <button
@@ -265,7 +265,7 @@ export function ProfileWizard({
             {/* Next/Save button */}
             {currentStep < 3 ? (
               <button
-                className="bg-blue-500 text-white px-5 py-2.5 rounded-md text-sm hover:bg-blue-600 transition-colors disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed"
+                className="bg-blue-500 text-white px-5 py-2.5 rounded-md text-sm hover:bg-blue-600 transition-[background-color,transform] active:scale-[0.96] disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed"
                 onClick={handleNext}
                 disabled={currentStep === 1 && !isStep1Valid}
               >
@@ -273,7 +273,7 @@ export function ProfileWizard({
               </button>
             ) : (
               <button
-                className="bg-blue-500 text-white px-5 py-2.5 rounded-md text-sm hover:bg-blue-600 transition-colors disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed"
+                className="bg-blue-500 text-white px-5 py-2.5 rounded-md text-sm hover:bg-blue-600 transition-[background-color,transform] active:scale-[0.96] disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed"
                 onClick={handleSave}
                 disabled={!isStep1Valid}
               >

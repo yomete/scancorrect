@@ -30,22 +30,22 @@ export default function Home() {
       {/* Hero Section */}
       <section className="container mx-auto px-6 py-24 pt-32">
         <div className="max-w-4xl">
-          <h1 className="text-6xl md:text-7xl font-black text-black mb-6 leading-tight tracking-tight font-fjalla">
+          <h1 className="text-6xl md:text-7xl font-black text-black mb-6 leading-tight tracking-tight font-fjalla text-balance">
             ScanCorrect
           </h1>
-          <p className="text-xl md:text-2xl text-slate-700 leading-relaxed mb-8">
+          <p className="text-xl md:text-2xl text-slate-700 leading-relaxed mb-8 text-pretty">
             Transform generic scanner metadata into proper camera details. ScanCorrect gives you a beautiful drag-and-drop interface to fix camera metadata in your scanned film images, with batch processing and no external dependencies.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <button
               onClick={() => scrollToSection('download')}
-              className="bg-black text-white px-8 py-4 rounded-lg font-bold hover:bg-gray-800 transition-all duration-300 hover:scale-105"
+              className="bg-black text-white px-8 py-4 rounded-lg font-bold hover:bg-gray-800 transition-[background-color,transform] duration-300 active:scale-[0.96]"
             >
               Download Free
             </button>
             <button
               onClick={() => scrollToSection('how-it-works')}
-              className="bg-white text-black border-2 border-black px-8 py-4 rounded-lg font-bold hover:bg-black hover:text-white transition-all duration-300"
+              className="bg-white text-black border-2 border-black px-8 py-4 rounded-lg font-bold hover:bg-black hover:text-white transition-[background-color,color,transform] duration-300 active:scale-[0.96]"
             >
               See How It Works
             </button>
@@ -55,7 +55,7 @@ export default function Home() {
 
       {/* Before/After Demo Section */}
       <section className="container mx-auto px-6 py-16">
-        <div className="bg-white rounded-2xl p-8 shadow-2xl border border-slate-200">
+        <div className="bg-white rounded-2xl p-8 shadow-[0_25px_50px_rgba(0,0,0,0.12),0_12px_24px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.05)]">
           <BeforeAfterSlider
             beforeImage="/before-new.png"
             afterImage="/after-new.png"
@@ -68,10 +68,10 @@ export default function Home() {
       {/* The Problem Section */}
       <section className="container mx-auto px-6 py-24">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-black mb-6 font-fjalla">
+          <h2 className="text-4xl md:text-5xl font-bold text-black mb-6 font-fjalla text-balance">
             Your scanner doesn't know your camera
           </h2>
-          <p className="text-lg text-gray-700 leading-relaxed mb-4">
+          <p className="text-lg text-gray-700 leading-relaxed mb-4 text-pretty">
             When you scan film, your scanner writes its own make and model into the EXIF data.
             Your Nikon FM2 becomes an "Epson V600". Your Leica M6 becomes a "Plustek OpticFilm 8200i".
             Your carefully catalogued film archive becomes unsearchable by the cameras you actually used.
@@ -85,7 +85,7 @@ export default function Home() {
       {/* Features Section */}
       <section id="features" className="container mx-auto px-6 py-24 bg-gray-50 scroll-mt-20">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-black mb-4 text-center font-fjalla">
+          <h2 className="text-4xl md:text-5xl font-bold text-black mb-4 text-center font-fjalla text-balance">
             Everything you need to fix your scans
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16">
@@ -164,10 +164,10 @@ export default function Home() {
       {/* Workflow Section */}
       <section className="container mx-auto px-6 py-24">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-black mb-4 text-center font-fjalla">
+          <h2 className="text-4xl md:text-5xl font-bold text-black mb-4 text-center font-fjalla text-balance">
             Works with your workflow
           </h2>
-          <p className="text-xl text-gray-600 text-center mb-12">
+          <p className="text-xl text-gray-600 text-center mb-12 text-pretty">
             Fix your metadata before import. No plugins to install, no command line to learn.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -190,7 +190,7 @@ export default function Home() {
       {/* How It Works Section */}
       <section id="how-it-works" className="container mx-auto px-6 py-24 bg-gray-50 scroll-mt-20">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-black mb-16 text-center font-fjalla">
+          <h2 className="text-4xl md:text-5xl font-bold text-black mb-16 text-center font-fjalla text-balance">
             How it works
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
@@ -219,10 +219,10 @@ export default function Home() {
       {/* Pricing Section */}
       <section id="pricing" className="container mx-auto px-6 py-24 scroll-mt-20">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold text-black mb-4 text-center font-fjalla">
+          <h2 className="text-4xl md:text-5xl font-bold text-black mb-4 text-center font-fjalla text-balance">
             Simple pricing
           </h2>
-          <p className="text-xl text-gray-600 text-center mb-16">
+          <p className="text-xl text-gray-600 text-center mb-16 text-pretty">
             Start free. Upgrade when you need more.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -265,28 +265,28 @@ export default function Home() {
       {/* Download Section */}
       <section id="download" className="container mx-auto px-6 py-24 bg-gray-50 scroll-mt-20">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-6xl font-bold text-black mb-6 font-fjalla">
+          <h2 className="text-4xl md:text-6xl font-bold text-black mb-6 font-fjalla text-balance">
             Ready to fix your film photos?
           </h2>
-          <p className="text-xl text-gray-700 mb-12 leading-relaxed">
+          <p className="text-xl text-gray-700 mb-12 leading-relaxed text-pretty">
             Download ScanCorrect for free. No account required, works offline.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12">
             <a
               href="#"
-              className="bg-black text-white px-10 py-5 rounded-lg text-lg font-bold hover:bg-gray-800 hover:scale-105 transition-all duration-300 inline-block"
+              className="bg-black text-white px-10 py-5 rounded-lg text-lg font-bold hover:bg-gray-800 transition-[background-color,transform] duration-300 active:scale-[0.96] inline-block"
             >
               Download for macOS
             </a>
             <a
               href="#"
-              className="bg-black text-white px-10 py-5 rounded-lg text-lg font-bold hover:bg-gray-800 hover:scale-105 transition-all duration-300 inline-block"
+              className="bg-black text-white px-10 py-5 rounded-lg text-lg font-bold hover:bg-gray-800 transition-[background-color,transform] duration-300 active:scale-[0.96] inline-block"
             >
               Download for Windows
             </a>
             <a
               href="#"
-              className="bg-black text-white px-10 py-5 rounded-lg text-lg font-bold hover:bg-gray-800 hover:scale-105 transition-all duration-300 inline-block"
+              className="bg-black text-white px-10 py-5 rounded-lg text-lg font-bold hover:bg-gray-800 transition-[background-color,transform] duration-300 active:scale-[0.96] inline-block"
             >
               Download for Linux
             </a>

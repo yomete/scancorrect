@@ -81,7 +81,7 @@ export function ThemeSwitcher() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        className="text-gray-500 dark:text-gray-400 text-lg p-2 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-600 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center justify-center w-8 h-8"
+        className="text-gray-500 dark:text-gray-400 text-lg p-2 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-600 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center justify-center w-10 h-10"
         onClick={() => setShowDropdown(!showDropdown)}
         title="Switch theme"
       >

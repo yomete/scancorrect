@@ -6,7 +6,7 @@ export function Footer() {
           <p className="text-lg font-medium text-gray-900 mb-2">
             Built by a film photographer
           </p>
-          <p className="text-sm text-gray-600 max-w-2xl mx-auto">
+          <p className="text-sm text-gray-600 max-w-2xl mx-auto text-pretty">
             Made by Yomi Eluwande — shooting film, scanning at home, and tired
             of metadata that says "Epson."
           </p>

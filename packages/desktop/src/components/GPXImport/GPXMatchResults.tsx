@@ -91,7 +91,7 @@ export function GPXMatchResults({
           return (
             <div
               key={result.imagePath}
-              className={`flex items-center gap-3 p-3 rounded-lg border ${style.border} ${style.bg} cursor-pointer transition-all ${
+              className={`flex items-center gap-3 p-3 rounded-lg border ${style.border} ${style.bg} cursor-pointer transition-[border-color,background-color,box-shadow] ${
                 isSelected ? 'ring-2 ring-blue-500' : ''
               }`}
               onClick={() => onToggleSelect(result.imagePath)}

@@ -73,7 +73,7 @@ export function QuotaStatus({ onQuotaExhausted }: QuotaStatusProps) {
       <div className="flex items-center gap-1.5">
         <div className="w-16 h-1.5 bg-gray-200 dark:bg-neutral-500 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${
+            className={`h-full rounded-full transition-[width] ${
               isExhausted
                 ? "bg-red-500"
                 : isLow
@@ -83,7 +83,7 @@ export function QuotaStatus({ onQuotaExhausted }: QuotaStatusProps) {
             style={{ width: `${Math.min(percentage, 100)}%` }}
           />
         </div>
-        <span className="whitespace-nowrap">
+        <span className="whitespace-nowrap tabular-nums">
           {quota.used}/{quota.limit}
         </span>
       </div>

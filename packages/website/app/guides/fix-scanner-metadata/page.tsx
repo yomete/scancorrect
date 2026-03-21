@@ -15,11 +15,11 @@ export default function FixScannerMetadataGuide() {
 
       <main className="pt-32 pb-20">
         <article className="max-w-3xl mx-auto px-6">
-          <h1 className="text-4xl md:text-5xl font-bold text-black mb-6 leading-tight">
+          <h1 className="text-4xl md:text-5xl font-bold text-black mb-6 leading-tight text-balance">
             How to Fix Scanner Metadata on Your Film Scans (2025)
           </h1>
 
-          <div className="text-lg text-gray-700 leading-relaxed space-y-6">
+          <div className="text-lg text-gray-700 leading-relaxed space-y-6 text-pretty">
             <p className="text-xl text-gray-800 font-medium">
               Your film scans say "Epson" instead of "Nikon FM2." Here's how to
               fix camera metadata on scanned film photos before importing to

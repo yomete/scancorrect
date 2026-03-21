@@ -9,7 +9,7 @@ interface WorkflowCardProps {
 
 export default function WorkflowCard({ app, title, description, smallText }: WorkflowCardProps) {
   return (
-    <div className="p-8 border border-gray-200 rounded-lg bg-white hover:shadow-lg transition-all duration-300">
+    <div className="p-8 rounded-lg bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_25px_rgba(0,0,0,0.08),0_4px_10px_rgba(0,0,0,0.04)] transition-shadow duration-300">
       <div className="flex items-center mb-4">
         {app === 'lightroom' ? (
           <svg className="w-8 h-8 mr-3" viewBox="0 0 24 24" fill="none">
@@ -25,7 +25,7 @@ export default function WorkflowCard({ app, title, description, smallText }: Wor
         )}
         <h3 className="text-xl font-bold">{title}</h3>
       </div>
-      <p className="text-gray-700 mb-3 leading-relaxed">{description}</p>
+      <p className="text-gray-700 mb-3 leading-relaxed text-pretty">{description}</p>
       <p className="text-sm text-gray-500">{smallText}</p>
     </div>
   );

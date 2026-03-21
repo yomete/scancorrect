@@ -558,7 +558,7 @@ function App() {
                 >
                   ← Back
                 </button>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
                   {images.length} {images.length === 1 ? "image" : "images"} loaded
                 </span>
               </div>
@@ -570,7 +570,7 @@ function App() {
                 >
                   History
                   {processingLog.length > 0 && (
-                    <span className="ml-1 px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-neutral-600 rounded-full">
+                    <span className="ml-1 px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-neutral-600 rounded-full tabular-nums">
                       {processingLog.length}
                     </span>
                   )}
@@ -578,14 +578,14 @@ function App() {
                 <button
                   onClick={handleDiscardChanges}
                   disabled={isProcessing || imagesWithChanges === 0}
-                  className="px-4 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-neutral-600 hover:bg-gray-300 dark:hover:bg-neutral-500 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-neutral-600 hover:bg-gray-300 dark:hover:bg-neutral-500 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-[background-color,transform] active:scale-[0.96]"
                 >
                   Discard All
                 </button>
                 <button
                   onClick={handleSaveChanges}
                   disabled={isProcessing || imagesWithChanges === 0}
-                  className="px-4 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed transition-[background-color,transform] active:scale-[0.96]"
                 >
                   {isProcessing
                     ? "Processing..."

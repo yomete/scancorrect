@@ -92,7 +92,7 @@ export default function BeforeAfterSlider({
           <img
             src={afterImage}
             alt={afterAlt}
-            className="w-full h-auto object-contain"
+            className="w-full h-auto object-contain outline-1 outline-black/10"
             draggable={false}
           />
 
@@ -109,7 +109,7 @@ export default function BeforeAfterSlider({
           <img
             src={beforeImage}
             alt={beforeAlt}
-            className="w-full h-auto object-contain"
+            className="w-full h-auto object-contain outline-1 outline-black/10"
             draggable={false}
           />
           <div className="absolute top-4 left-4 bg-slate-900 text-white px-3 py-1 rounded-full text-sm font-medium border border-slate-700">

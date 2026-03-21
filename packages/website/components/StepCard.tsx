@@ -13,7 +13,7 @@ export default function StepCard({ number, title, description }: StepCardProps) 
         <span className="text-3xl font-bold font-fjalla">{number}</span>
       </div>
       <h3 className="text-2xl font-bold mb-3 font-fjalla">{title}</h3>
-      <p className="text-gray-600 leading-relaxed max-w-sm">{description}</p>
+      <p className="text-gray-600 leading-relaxed max-w-sm text-pretty">{description}</p>
     </div>
   );
 }

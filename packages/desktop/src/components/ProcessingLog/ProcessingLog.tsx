@@ -43,7 +43,7 @@ export function ProcessingLog({
           bg-gray-50 dark:bg-neutral-800
           shadow-xl
           flex flex-col
-          transform transition-transform duration-300 ease-out
+          transition-transform duration-300 ease-out
           ${isOpen ? "translate-x-0" : "translate-x-full"}
         `}
       >
@@ -55,7 +55,7 @@ export function ProcessingLog({
                 icon="mdi:history"
                 className="w-5 h-5 text-gray-600 dark:text-gray-400"
               />
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 [text-wrap:balance]">
                 Processing History
               </h2>
             </div>
@@ -71,17 +71,17 @@ export function ProcessingLog({
           {/* Stats summary */}
           {entries.length > 0 && (
             <div className="flex items-center gap-4 mt-2 text-sm">
-              <span className="text-gray-500 dark:text-gray-400">
+              <span className="text-gray-500 dark:text-gray-400 tabular-nums">
                 {entries.length} {entries.length === 1 ? "entry" : "entries"}
               </span>
               {successCount > 0 && (
-                <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                <span className="flex items-center gap-1 text-green-600 dark:text-green-400 tabular-nums">
                   <Icon icon="mdi:check-circle" className="w-4 h-4" />
                   {successCount} successful
                 </span>
               )}
               {errorCount > 0 && (
-                <span className="flex items-center gap-1 text-red-500">
+                <span className="flex items-center gap-1 text-red-500 tabular-nums">
                   <Icon icon="mdi:alert-circle" className="w-4 h-4" />
                   {errorCount} failed
                 </span>
@@ -137,7 +137,7 @@ export function ProcessingLog({
                 hover:bg-red-100 dark:hover:bg-red-900/30
                 border border-red-200 dark:border-red-800
                 rounded-lg
-                transition-colors
+                transition-[background-color,transform] active:scale-[0.96]
               "
             >
               <Icon icon="mdi:delete-outline" className="w-5 h-5" />

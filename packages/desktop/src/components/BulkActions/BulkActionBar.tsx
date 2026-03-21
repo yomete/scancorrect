@@ -34,7 +34,7 @@ export function BulkActionBar({
       `}
     >
       <div className="flex items-center gap-2 min-w-0">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap tabular-nums">
           {selectedCount} of {totalCount} selected
         </span>
       </div>
@@ -68,7 +68,7 @@ export function BulkActionBar({
           type="button"
           onClick={onSetLocation}
           disabled={disabled || !hasSelection}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-[background-color,transform] active:scale-[0.96] disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed"
         >
           <Icon icon="mdi:map-marker" width={16} height={16} />
           Set Location
@@ -78,7 +78,7 @@ export function BulkActionBar({
           type="button"
           onClick={onApplyDefaults}
           disabled={disabled || !hasSelection}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-500 hover:bg-green-600 rounded-md transition-colors disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-500 hover:bg-green-600 rounded-md transition-[background-color,transform] active:scale-[0.96] disabled:bg-gray-300 dark:disabled:bg-neutral-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed"
         >
           <Icon icon="mdi:camera" width={16} height={16} />
           Apply Profile Defaults

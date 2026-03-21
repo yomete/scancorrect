@@ -39,7 +39,7 @@ export function AnimateOnScroll({ children, delay = 0 }: AnimateOnScrollProps) {
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out ${
+      className={`transition-[opacity,transform] duration-700 ease-out ${
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
       }`}
       style={{ transitionDelay: `${delay}ms` }}

@@ -194,7 +194,7 @@ export function LicenseModal({ isOpen, onClose, onActivated }: LicenseModalProps
               </p>
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg font-medium transition-all"
+                className="px-6 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg font-medium transition-[background-color,transform] active:scale-[0.96]"
               >
                 Get Started
               </button>
@@ -211,7 +211,7 @@ export function LicenseModal({ isOpen, onClose, onActivated }: LicenseModalProps
                   value={licenseKey}
                   onChange={(e) => setLicenseKey(e.target.value)}
                   placeholder="SC-XXXX-XXXX-XXXX-XXXX"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-mono"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-[border-color,box-shadow] font-mono"
                   onKeyDown={(e) => e.key === "Enter" && handleActivate()}
                 />
               </div>
@@ -232,7 +232,7 @@ export function LicenseModal({ isOpen, onClose, onActivated }: LicenseModalProps
                 <button
                   onClick={handleActivate}
                   disabled={isLoading || !licenseKey.trim()}
-                  className="flex-1 px-4 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg font-medium transition-[background-color,transform] active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? "Activating..." : "Activate"}
                 </button>

@@ -32,7 +32,7 @@ export function Footer({
     <footer className="bg-white/95 dark:bg-neutral-700 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 px-3 py-2">
       <div className="flex items-center gap-2 max-w-6xl mx-auto">
         <button
-          className="text-white w-6 h-6 rounded-md text-lg font-bold flex items-center justify-center transition-colors flex-shrink-0 border border-neutral-600 dark:border-neutral-600"
+          className="text-white w-10 h-10 rounded-md text-lg font-bold flex items-center justify-center transition-[background-color,transform] active:scale-[0.96] flex-shrink-0 border border-neutral-600 dark:border-neutral-600 hover:bg-gray-100 dark:hover:bg-neutral-600"
           onClick={onAddProfile}
           title="Add new camera profile"
         >

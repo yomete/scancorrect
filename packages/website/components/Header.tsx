@@ -26,7 +26,7 @@ export function Header() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-shadow duration-300 ${
         isScrolled ? 'bg-white shadow-md' : 'bg-white'
       }`}
     >
@@ -54,7 +54,7 @@ export function Header() {
             </ScrollLink>
             <ScrollLink
               href="#download"
-              className="bg-black text-white px-6 py-2 rounded-md hover:bg-gray-800 transition-colors"
+              className="bg-black text-white px-6 py-2 rounded-md hover:bg-gray-800 transition-[background-color,transform] active:scale-[0.96]"
             >
               Download
             </ScrollLink>

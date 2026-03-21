@@ -186,7 +186,7 @@ describe('DropZone', () => {
       render(<DropZone {...defaultProps} />)
 
       const dropZone = screen.getByText(/Supported:/i).closest('div')?.parentElement
-      expect(dropZone).toHaveClass('transition-all')
+      expect(dropZone).toHaveClass('transition-colors')
     })
 
     it('should apply success styling to successful results', () => {

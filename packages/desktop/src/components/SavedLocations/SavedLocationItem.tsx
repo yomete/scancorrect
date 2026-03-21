@@ -84,7 +84,7 @@ export function SavedLocationItem({
 
       <button
         onClick={handleDeleteClick}
-        className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
+        className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 transition-[opacity,background-color]"
         title="Delete location"
       >
         <Icon
