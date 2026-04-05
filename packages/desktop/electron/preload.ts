@@ -92,16 +92,6 @@ interface GPXTrack {
   }>
 }
 
-interface LicenseStatus {
-  key: string
-  valid: boolean
-  activationId?: string
-  machineName?: string
-  activatedAt?: string
-  lastValidatedAt?: string
-  offlineGracePeriodEnd?: string
-}
-
 export interface ElectronAPI {
   // Existing profile methods
   getProfiles: () => Promise<CameraProfile[]>
@@ -115,7 +105,7 @@ export interface ElectronAPI {
 
   // EXIF reading and writing
   readExif: (filePath: string) => Promise<{ data: ExifData; isScanner: boolean } | { error: string }>
-  writeExif: (filePath: string, data: ExifData, keepBackup?: boolean) => Promise<{ success: boolean; backupPath?: string; error?: string; quotaExceeded?: boolean }>
+  writeExif: (filePath: string, data: ExifData, keepBackup?: boolean) => Promise<{ success: boolean; backupPath?: string; error?: string }>
 
   // Backup management
   restoreBackup: (filePath: string, backupPath: string) => Promise<{ success: boolean; error?: string }>
@@ -171,38 +161,10 @@ export interface ElectronAPI {
     confidence: 'exact' | 'close' | 'far' | 'no_match'
   }>>
 
-  // User Tier
-  getUserTier: () => Promise<'free' | 'paid'>
-  setUserTier: (tier: 'free' | 'paid') => Promise<void>
-
-  // Monthly Quota
-  getQuotaStatus: () => Promise<{
-    used: number
-    limit: number
-    remaining: number
-    canProcess: boolean
-    resetsAt: string
-  }>
-  checkCanProcess: (imageCount: number) => Promise<{
-    canProcess: boolean
-    remaining: number
-    wouldExceed: boolean
-  }>
-
   // Mapbox Configuration
   getMapboxToken: () => Promise<string | undefined>
   setMapboxToken: (token: string | undefined) => Promise<void>
 
-  // License Management
-  activateLicense: (licenseKey: string) => Promise<{ success: boolean; error?: string }>
-  getLicenseStatus: () => Promise<LicenseStatus | null>
-  deactivateLicense: () => Promise<{ success: boolean; error?: string }>
-  validateLicenseOnline: () => Promise<{ valid: boolean; error?: string }>
-
-  // Dev Testing (only works in dev mode)
-  devResetLicense: () => Promise<void>
-  devExhaustQuota: () => Promise<void>
-  devSetPaid: () => Promise<void>
 }
 
 const electronAPI: ElectronAPI = {
@@ -276,28 +238,10 @@ const electronAPI: ElectronAPI = {
     toleranceSeconds: number
   ) => ipcRenderer.invoke('match-photos-to-gpx', track, images, toleranceSeconds),
 
-  // User Tier
-  getUserTier: () => ipcRenderer.invoke('get-user-tier'),
-  setUserTier: (tier: 'free' | 'paid') => ipcRenderer.invoke('set-user-tier', tier),
-
-  // Monthly Quota
-  getQuotaStatus: () => ipcRenderer.invoke('get-quota-status'),
-  checkCanProcess: (imageCount: number) => ipcRenderer.invoke('check-can-process', imageCount),
-
   // Mapbox Configuration
   getMapboxToken: () => ipcRenderer.invoke('get-mapbox-token'),
   setMapboxToken: (token: string | undefined) => ipcRenderer.invoke('set-mapbox-token', token),
 
-  // License Management
-  activateLicense: (licenseKey: string) => ipcRenderer.invoke('activate-license', licenseKey),
-  getLicenseStatus: () => ipcRenderer.invoke('get-license-status'),
-  deactivateLicense: () => ipcRenderer.invoke('deactivate-license'),
-  validateLicenseOnline: () => ipcRenderer.invoke('validate-license-online'),
-
-  // Dev Testing (only works in dev mode)
-  devResetLicense: () => ipcRenderer.invoke('dev-reset-license'),
-  devExhaustQuota: () => ipcRenderer.invoke('dev-exhaust-quota'),
-  devSetPaid: () => ipcRenderer.invoke('dev-set-paid'),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)

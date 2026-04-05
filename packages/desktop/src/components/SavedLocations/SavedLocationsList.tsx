@@ -3,7 +3,6 @@ import { Icon } from '@iconify/react'
 import { SavedLocation, LocationValue } from '../../types'
 import { SavedLocationItem } from './SavedLocationItem'
 import { useLocationStore } from '../../store/locationStore'
-import { useCanAddSavedLocation, FREE_TIER_LIMITS } from '../../features/featureFlags'
 
 interface SavedLocationsListProps {
   onSelectLocation: (location: LocationValue) => void
@@ -27,8 +26,6 @@ export function SavedLocationsList({
 
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [newLocationName, setNewLocationName] = useState('')
-
-  const canAddMore = useCanAddSavedLocation(savedLocations.length)
 
   useEffect(() => {
     loadSavedLocations()
@@ -94,9 +91,8 @@ export function SavedLocationsList({
         <div className="flex items-center gap-2">
           {!showSaveModal ? (
             <button
-              onClick={() => canAddMore ? setShowSaveModal(true) : undefined}
-              disabled={!canAddMore}
-              className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+              onClick={() => setShowSaveModal(true)}
+              className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
             >
               <Icon icon="mdi:bookmark-plus" width={16} height={16} />
               Save this location
@@ -130,17 +126,6 @@ export function SavedLocationsList({
               </button>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Free tier limit warning */}
-      {!canAddMore && (
-        <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded text-xs text-amber-700 dark:text-amber-300">
-          <Icon icon="mdi:information" width={14} height={14} />
-          <span>
-            Free tier limited to {FREE_TIER_LIMITS.savedLocations} saved locations.{' '}
-            <button className="underline">Upgrade</button>
-          </span>
         </div>
       )}
 

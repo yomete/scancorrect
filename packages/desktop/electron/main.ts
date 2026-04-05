@@ -9,14 +9,6 @@ import { geocodeLocation, GeocodingResult } from './geocoding'
 import { readExifData, writeExifData, restoreFromBackup, initBackupDir, ExifData } from './exif'
 import { isLikelyScannerMetadata } from './scanner-detection'
 import { parseGPX, matchPhotosToGPX, GPXMatchResult } from './gpx'
-import {
-  LicenseStatus,
-  validateLicenseKey,
-  activateLicense,
-  deactivateLicense,
-  calculateOfflineGraceEnd,
-  isWithinOfflineGrace,
-} from './license'
 
 interface CustomValues {
   isoValues: number[]
@@ -71,11 +63,6 @@ interface GPXTrack {
   }>
 }
 
-interface MonthlyQuota {
-  count: number      // transformations used this month
-  monthKey: string   // "2025-01" format
-}
-
 interface StoreSchema {
   profiles: CameraProfile[]
   customValues: CustomValues
@@ -84,10 +71,7 @@ interface StoreSchema {
   savedLocations: SavedLocation[]
   locationHistory: LocationHistoryEntry[]
   gpxTracks: GPXTrack[]
-  userTier: 'free' | 'paid'
   mapboxAccessToken?: string
-  monthlyQuota: MonthlyQuota
-  licenseStatus?: LicenseStatus
 }
 
 // Lazy-load electron-store to avoid module-level electron initialization
@@ -110,9 +94,7 @@ function getStore(): Store<StoreSchema> {
         savedLocations: [],
         locationHistory: [],
         gpxTracks: [],
-        userTier: 'free',
-        mapboxAccessToken: undefined,
-        monthlyQuota: { count: 0, monthKey: '' }
+        mapboxAccessToken: undefined
       }
     })
   }
@@ -361,25 +343,9 @@ ipcMain.handle('read-exif', async (_, filePath: string): Promise<{ data: ExifDat
 })
 
 // Write EXIF data to file
-ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData, keepBackup: boolean = true): Promise<{ success: boolean; backupPath?: string; error?: string; quotaExceeded?: boolean }> => {
+ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData, keepBackup: boolean = true): Promise<{ success: boolean; backupPath?: string; error?: string }> => {
   try {
-    // Check quota before processing
-    const quotaState = getQuotaState()
-    if (!quotaState.canProcess) {
-      return {
-        success: false,
-        error: 'Monthly quota exceeded. Upgrade to Pro for unlimited processing.',
-        quotaExceeded: true
-      }
-    }
-
     const result = await writeExifData(exiftool, filePath, data, keepBackup)
-
-    // Increment quota on successful write
-    if (result.success) {
-      incrementQuota(1)
-    }
-
     return result
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error writing EXIF data' }
@@ -639,103 +605,6 @@ ipcMain.handle('match-photos-to-gpx', async (
   return matchPhotosToGPX(track, images, toleranceSeconds)
 })
 
-// ============================================
-// User Tier IPC Handlers
-// ============================================
-
-ipcMain.handle('get-user-tier', (): 'free' | 'paid' => {
-  return getStore().get('userTier', 'free')
-})
-
-ipcMain.handle('set-user-tier', (_, tier: 'free' | 'paid'): void => {
-  getStore().set('userTier', tier)
-})
-
-// ============================================
-// Monthly Quota IPC Handlers
-// ============================================
-
-const FREE_TIER_MONTHLY_LIMIT = 108 // 3 rolls of 36 exposures
-
-function getCurrentMonthKey(): string {
-  return new Date().toISOString().slice(0, 7) // "2025-01" format
-}
-
-function getQuotaState(): { used: number; limit: number; remaining: number; canProcess: boolean; resetsAt: string } {
-  const tier = getStore().get('userTier', 'free')
-
-  if (tier === 'paid') {
-    return {
-      used: 0,
-      limit: Infinity,
-      remaining: Infinity,
-      canProcess: true,
-      resetsAt: ''
-    }
-  }
-
-  const quota = getStore().get('monthlyQuota', { count: 0, monthKey: '' })
-  const currentMonth = getCurrentMonthKey()
-
-  // Reset if new month
-  if (quota.monthKey !== currentMonth) {
-    getStore().set('monthlyQuota', { count: 0, monthKey: currentMonth })
-    return {
-      used: 0,
-      limit: FREE_TIER_MONTHLY_LIMIT,
-      remaining: FREE_TIER_MONTHLY_LIMIT,
-      canProcess: true,
-      resetsAt: getNextMonthResetDate()
-    }
-  }
-
-  const remaining = FREE_TIER_MONTHLY_LIMIT - quota.count
-  return {
-    used: quota.count,
-    limit: FREE_TIER_MONTHLY_LIMIT,
-    remaining: Math.max(0, remaining),
-    canProcess: remaining > 0,
-    resetsAt: getNextMonthResetDate()
-  }
-}
-
-function getNextMonthResetDate(): string {
-  const now = new Date()
-  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-  return nextMonth.toISOString()
-}
-
-function incrementQuota(count: number): void {
-  const tier = getStore().get('userTier', 'free')
-  if (tier === 'paid') return // Don't track for paid users
-
-  const quota = getStore().get('monthlyQuota', { count: 0, monthKey: '' })
-  const currentMonth = getCurrentMonthKey()
-
-  if (quota.monthKey !== currentMonth) {
-    getStore().set('monthlyQuota', { count: count, monthKey: currentMonth })
-  } else {
-    getStore().set('monthlyQuota', { count: quota.count + count, monthKey: currentMonth })
-  }
-}
-
-ipcMain.handle('get-quota-status', (): { used: number; limit: number; remaining: number; canProcess: boolean; resetsAt: string } => {
-  return getQuotaState()
-})
-
-ipcMain.handle('check-can-process', (_, imageCount: number): { canProcess: boolean; remaining: number; wouldExceed: boolean } => {
-  const state = getQuotaState()
-
-  if (state.limit === Infinity) {
-    return { canProcess: true, remaining: Infinity, wouldExceed: false }
-  }
-
-  return {
-    canProcess: state.remaining > 0,
-    remaining: state.remaining,
-    wouldExceed: imageCount > state.remaining
-  }
-})
 
 // ============================================
 // Mapbox Configuration IPC Handlers
@@ -753,131 +622,3 @@ ipcMain.handle('set-mapbox-token', (_, token: string | undefined): void => {
   }
 })
 
-// ============================================
-// License Management IPC Handlers
-// ============================================
-
-ipcMain.handle('activate-license', async (_, licenseKey: string): Promise<{ success: boolean; error?: string }> => {
-  try {
-    // First validate the key
-    const validation = await validateLicenseKey(licenseKey)
-    if (!validation.valid) {
-      return { success: false, error: validation.error }
-    }
-
-    // Then activate on this machine
-    const activation = await activateLicense(licenseKey)
-    if (!activation.success) {
-      return { success: false, error: activation.error }
-    }
-
-    // Store license and update tier
-    const licenseStatus: LicenseStatus = {
-      key: licenseKey,
-      valid: true,
-      activationId: activation.activationId,
-      machineName: activation.machineName,
-      activatedAt: new Date().toISOString(),
-      lastValidatedAt: new Date().toISOString(),
-      offlineGracePeriodEnd: calculateOfflineGraceEnd(),
-    }
-
-    getStore().set('licenseStatus', licenseStatus)
-    getStore().set('userTier', 'paid')
-
-    return { success: true }
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error activating license'
-    }
-  }
-})
-
-ipcMain.handle('get-license-status', (): LicenseStatus | null => {
-  const status = getStore().get('licenseStatus')
-  return status ?? null
-})
-
-ipcMain.handle('deactivate-license', async (): Promise<{ success: boolean; error?: string }> => {
-  try {
-    const licenseStatus = getStore().get('licenseStatus') as LicenseStatus | undefined
-
-    if (!licenseStatus?.key || !licenseStatus?.activationId) {
-      // No license to deactivate, just clear local state
-      getStore().delete('licenseStatus')
-      getStore().set('userTier', 'free')
-      return { success: true }
-    }
-
-    // Deactivate with Polar
-    const result = await deactivateLicense(licenseStatus.key, licenseStatus.activationId)
-
-    // Clear local state regardless of API result
-    getStore().delete('licenseStatus')
-    getStore().set('userTier', 'free')
-
-    if (!result.success) {
-      // License cleared locally but API failed - this is okay
-      console.warn('License deactivation API failed:', result.error)
-    }
-
-    return { success: true }
-  } catch (error) {
-    // Clear local state even on error
-    getStore().delete('licenseStatus')
-    getStore().set('userTier', 'free')
-    return { success: true }
-  }
-})
-
-ipcMain.handle('validate-license-online', async (): Promise<{ valid: boolean; error?: string }> => {
-  const licenseStatus = getStore().get('licenseStatus') as LicenseStatus | undefined
-
-  if (!licenseStatus?.key) {
-    return { valid: false, error: 'No license key stored' }
-  }
-
-  const result = await validateLicenseKey(licenseStatus.key)
-
-  if (result.valid) {
-    // Update last validated time and extend grace period
-    getStore().set('licenseStatus', {
-      ...licenseStatus,
-      lastValidatedAt: new Date().toISOString(),
-      offlineGracePeriodEnd: calculateOfflineGraceEnd(),
-    })
-    return { valid: true }
-  }
-
-  // Check offline grace period
-  if (isWithinOfflineGrace(licenseStatus.offlineGracePeriodEnd)) {
-    return { valid: true }
-  }
-
-  // Grace period expired - revoke
-  getStore().delete('licenseStatus')
-  getStore().set('userTier', 'free')
-  return { valid: false, error: result.error || 'License validation failed' }
-})
-
-// ============================================
-// Dev Testing IPC Handlers (dev mode only)
-// ============================================
-
-ipcMain.handle('dev-reset-license', (): void => {
-  if (!isDev()) return
-  getStore().delete('licenseStatus')
-  getStore().set('userTier', 'free')
-  getStore().set('monthlyQuota', { count: 0, monthKey: getCurrentMonthKey() })
-})
-
-ipcMain.handle('dev-exhaust-quota', (): void => {
-  if (!isDev()) return
-  getStore().set('monthlyQuota', { count: FREE_TIER_MONTHLY_LIMIT, monthKey: getCurrentMonthKey() })
-})
-
-ipcMain.handle('dev-set-paid', (): void => {
-  if (!isDev()) return
-  getStore().set('userTier', 'paid')
-})

@@ -95,13 +95,6 @@ export interface ProcessResult {
 }
 
 // ============================================
-// Feature Flags & Tier System
-// ============================================
-
-export type FeatureTier = 'free' | 'paid'
-export type FeatureFlag = 'mapPicker' | 'gpxImport' | 'savedLocations' | 'locationHistory'
-
-// ============================================
 // Saved Locations
 // ============================================
 

@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Icon } from '@iconify/react'
 import { LocationValue, GeocodingResult, SavedLocation } from '../../types'
-import { useFeature } from '../../features/featureFlags'
-import { FeatureButton } from '../FeatureGate'
 import { MapPickerModal } from '../MapPicker'
 import { useLocationStore } from '../../store/locationStore'
 
@@ -37,9 +35,6 @@ export function LocationFieldEnhanced({
 
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const { enabled: mapPickerEnabled } = useFeature('mapPicker')
-  const { enabled: gpxEnabled } = useFeature('gpxImport')
 
   const {
     savedLocations,
@@ -295,27 +290,27 @@ export function LocationFieldEnhanced({
       {/* Quick action buttons */}
       <div className="flex flex-wrap gap-2">
         {/* Map Picker Button */}
-        <FeatureButton
-          feature="mapPicker"
+        <button
+          type="button"
           onClick={() => setShowMapPicker(true)}
           disabled={disabled}
-          className="text-xs px-2.5 py-1.5 bg-gray-100 dark:bg-neutral-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-neutral-500 transition-colors"
+          className="flex items-center gap-1 text-xs px-2.5 py-1.5 bg-gray-100 dark:bg-neutral-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-neutral-500 transition-colors disabled:opacity-50"
         >
           <Icon icon="mdi:map" width={14} height={14} />
           <span>Pick on Map</span>
-        </FeatureButton>
+        </button>
 
         {/* GPX Import Button */}
         {onOpenGPXImport && (
-          <FeatureButton
-            feature="gpxImport"
+          <button
+            type="button"
             onClick={onOpenGPXImport}
             disabled={disabled}
-            className="text-xs px-2.5 py-1.5 bg-gray-100 dark:bg-neutral-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-neutral-500 transition-colors"
+            className="flex items-center gap-1 text-xs px-2.5 py-1.5 bg-gray-100 dark:bg-neutral-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-neutral-500 transition-colors disabled:opacity-50"
           >
             <Icon icon="mdi:map-marker-path" width={14} height={14} />
             <span>From GPX</span>
-          </FeatureButton>
+          </button>
         )}
 
         {/* Saved Locations Dropdown */}

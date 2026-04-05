@@ -10,9 +10,7 @@ import {
   BulkLocationModal,
   ProcessingLog,
   ImageSidebar,
-  QuotaExhaustedModal,
 } from "./components";
-import { LicenseModal } from "./components/LicenseActivation";
 import {
   CameraProfile,
   ImageFile,
@@ -51,12 +49,6 @@ function App() {
 
   // Bulk location modal
   const [isBulkLocationOpen, setIsBulkLocationOpen] = useState(false);
-
-  // Quota exhausted modal
-  const [isQuotaExhaustedOpen, setIsQuotaExhaustedOpen] = useState(false);
-
-  // License modal
-  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -374,13 +366,6 @@ function App() {
           true // Keep backup
         );
 
-        // Check if quota was exceeded
-        if (writeResult.quotaExceeded) {
-          setIsQuotaExhaustedOpen(true);
-          setIsProcessing(false);
-          return; // Stop processing further images
-        }
-
         const logEntry: ProcessingLogEntry = {
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           timestamp: new Date(),
@@ -634,7 +619,6 @@ function App() {
         onProfileSelect={setSelectedProfile}
         onProfileDelete={handleDeleteProfile}
         onProfileEdit={handleEditProfile}
-        onQuotaExhausted={() => setIsQuotaExhaustedOpen(true)}
       />
 
       {/* Profile Wizard Modal */}
@@ -668,22 +652,6 @@ function App() {
         onClose={() => setIsLogOpen(false)}
       />
 
-      {/* Quota Exhausted Modal */}
-      <QuotaExhaustedModal
-        isOpen={isQuotaExhaustedOpen}
-        onClose={() => setIsQuotaExhaustedOpen(false)}
-        onOpenLicenseModal={() => setIsLicenseModalOpen(true)}
-      />
-
-      {/* License Activation Modal */}
-      <LicenseModal
-        isOpen={isLicenseModalOpen}
-        onClose={() => setIsLicenseModalOpen(false)}
-        onActivated={() => {
-          // Refresh quota status after activation
-          setIsQuotaExhaustedOpen(false);
-        }}
-      />
     </div>
   );
 }
