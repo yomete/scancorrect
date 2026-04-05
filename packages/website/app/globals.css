@@ -5,8 +5,18 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  body {
+    background-color: #F9F5F0;
+    color: #1a1a1a;
+    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  }
 }
 
-@utility font-fjalla {
-  font-family: var(--font-fjalla), sans-serif;
+@utility font-serif {
+  font-family: var(--font-fraunces), Georgia, serif;
+}
+
+@utility font-sans {
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
 }

@@ -72,15 +72,10 @@ export default function BeforeAfterSlider({
   }, [isDragging, handleMouseMove]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      {/* Instructions */}
-      <div className="text-center mb-4 text-slate-600 text-sm">
-        Drag the slider to see the transformation
-      </div>
-
+    <div className="w-full max-w-4xl mx-auto">
       <div
         ref={containerRef}
-        className="relative w-full overflow-hidden rounded-lg shadow-2xl cursor-col-resize select-none"
+        className="relative w-full overflow-hidden rounded-xl cursor-col-resize select-none shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -92,11 +87,10 @@ export default function BeforeAfterSlider({
           <img
             src={afterImage}
             alt={afterAlt}
-            className="w-full h-auto object-contain outline-1 outline-black/10"
+            className="w-full h-auto object-contain"
             draggable={false}
           />
-
-          <div className="absolute top-4 right-4 bg-white text-slate-900 px-3 py-1 rounded-full text-sm font-medium">
+          <div className="absolute top-4 right-4 bg-white/90 text-[#1a1a1a] px-3 py-1 rounded-full text-xs font-medium tracking-wide uppercase">
             After
           </div>
         </div>
@@ -109,27 +103,29 @@ export default function BeforeAfterSlider({
           <img
             src={beforeImage}
             alt={beforeAlt}
-            className="w-full h-auto object-contain outline-1 outline-black/10"
+            className="w-full h-auto object-contain"
             draggable={false}
           />
-          <div className="absolute top-4 left-4 bg-slate-900 text-white px-3 py-1 rounded-full text-sm font-medium border border-slate-700">
+          <div className="absolute top-4 left-4 bg-[#1a1a1a]/90 text-white px-3 py-1 rounded-full text-xs font-medium tracking-wide uppercase">
             Before
           </div>
         </div>
 
         {/* Slider Line */}
         <div
-          className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg z-10 cursor-col-resize"
+          className="absolute top-0 bottom-0 w-px bg-white/80 z-10 cursor-col-resize"
           style={{ left: `${sliderPosition}%` }}
         >
           {/* Slider Handle */}
           <div
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-lg border-2 border-gray-300 cursor-col-resize flex items-center justify-center hover:scale-110 transition-transform"
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-md cursor-col-resize flex items-center justify-center hover:scale-110 transition-transform"
             onMouseDown={handleMouseDown}
             onTouchStart={handleMouseDown}
           >
-            <div className="w-1 h-4 bg-gray-400 rounded"></div>
-            <div className="w-1 h-4 bg-gray-400 rounded ml-1"></div>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M4 3L1 7L4 11" stroke="#999" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M10 3L13 7L10 11" stroke="#999" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
         </div>
       </div>
