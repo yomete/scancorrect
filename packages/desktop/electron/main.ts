@@ -6,7 +6,7 @@ import * as crypto from 'crypto'
 import type Store from 'electron-store'
 import { ExifTool } from 'exiftool-vendored'
 import { geocodeLocation, GeocodingResult } from './geocoding'
-import { readExifData, writeExifData, restoreFromBackup, ExifData } from './exif'
+import { readExifData, writeExifData, restoreFromBackup, initBackupDir, ExifData } from './exif'
 import { isLikelyScannerMetadata } from './scanner-detection'
 import { parseGPX, matchPhotosToGPX, GPXMatchResult } from './gpx'
 import {
@@ -243,6 +243,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  initBackupDir(path.join(app.getPath('userData'), 'backups'))
   createWindow()
 
   app.on('activate', () => {

@@ -72,7 +72,7 @@ export default function BeforeAfterSlider({
   }, [isDragging, handleMouseMove]);
 
   return (
-    <div className="w-full mx-auto">
+    <div className="w-full max-w-2xl mx-auto">
       {/* Instructions */}
       <div className="text-center mb-4 text-slate-600 text-sm">
         Drag the slider to see the transformation

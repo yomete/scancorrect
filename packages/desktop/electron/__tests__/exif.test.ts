@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { readExifData, writeExifData, restoreFromBackup, cleanupBackup, cleanupBackups, ExifData } from '../exif'
+import { readExifData, writeExifData, restoreFromBackup, cleanupBackup, cleanupBackups, initBackupDir, getBackupPath, ExifData } from '../exif'
 import type { ExifTool, Tags } from 'exiftool-vendored'
 
 // Mock fs/promises
 vi.mock('fs/promises', () => ({
   access: vi.fn(),
   unlink: vi.fn(),
-  rename: vi.fn()
+  rename: vi.fn(),
+  copyFile: vi.fn(),
+  mkdir: vi.fn()
 }))
 
 import * as fs from 'fs/promises'
@@ -16,6 +18,7 @@ describe('exif', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    initBackupDir('/tmp/test-backups')
     mockExifTool = {
       read: vi.fn(),
       write: vi.fn()
@@ -310,15 +313,20 @@ describe('exif', () => {
 
     it('should keep backup by default', async () => {
       vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined)
+      vi.mocked(fs.rename).mockResolvedValue(undefined)
 
       const result = await writeExifData(mockExifTool, '/test.jpg', { make: 'Canon' })
 
-      expect(result.backupPath).toBe('/test.jpg_original')
+      expect(result.backupPath).toBe(getBackupPath('/test.jpg'))
+      expect(result.backupPath).toMatch(/^\/tmp\/test-backups\/.*\.jpg$/)
       expect(mockExifTool.write).toHaveBeenCalledWith(
         '/test.jpg',
         expect.any(Object),
         [] // No -overwrite_original flag
       )
+      expect(fs.mkdir).toHaveBeenCalledWith('/tmp/test-backups', { recursive: true })
+      expect(fs.rename).toHaveBeenCalledWith('/test.jpg_original', result.backupPath)
     })
 
     it('should not keep backup when keepBackup is false', async () => {
@@ -359,12 +367,13 @@ describe('exif', () => {
       vi.mocked(fs.unlink).mockResolvedValue(undefined)
       vi.mocked(fs.rename).mockResolvedValue(undefined)
 
+      const expectedBackupPath = getBackupPath('/test.jpg')
       const result = await restoreFromBackup('/test.jpg')
 
       expect(result).toBe(true)
-      expect(fs.access).toHaveBeenCalledWith('/test.jpg_original')
+      expect(fs.access).toHaveBeenCalledWith(expectedBackupPath)
       expect(fs.unlink).toHaveBeenCalledWith('/test.jpg')
-      expect(fs.rename).toHaveBeenCalledWith('/test.jpg_original', '/test.jpg')
+      expect(fs.rename).toHaveBeenCalledWith(expectedBackupPath, '/test.jpg')
     })
 
     it('should use explicit backup path if provided', async () => {
@@ -426,6 +435,48 @@ describe('exif', () => {
 
     it('should handle empty array', async () => {
       await expect(cleanupBackups([])).resolves.not.toThrow()
+    })
+  })
+
+  describe('getBackupPath', () => {
+    it('should return deterministic paths', () => {
+      const path1 = getBackupPath('/photos/scan001.jpg')
+      const path2 = getBackupPath('/photos/scan001.jpg')
+      expect(path1).toBe(path2)
+    })
+
+    it('should return different paths for different files', () => {
+      const path1 = getBackupPath('/photos/scan001.jpg')
+      const path2 = getBackupPath('/photos/scan002.jpg')
+      expect(path1).not.toBe(path2)
+    })
+
+    it('should preserve file extension', () => {
+      expect(getBackupPath('/photo.jpg')).toMatch(/\.jpg$/)
+      expect(getBackupPath('/photo.tiff')).toMatch(/\.tiff$/)
+    })
+
+    it('should use the configured backup directory', () => {
+      const result = getBackupPath('/test.jpg')
+      expect(result).toMatch(/^\/tmp\/test-backups\//)
+    })
+  })
+
+  describe('cross-volume move (EXDEV fallback)', () => {
+    it('should fall back to copy+delete when rename fails with EXDEV', async () => {
+      vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined)
+      vi.mocked(fs.copyFile).mockResolvedValue(undefined)
+      vi.mocked(fs.unlink).mockResolvedValue(undefined)
+
+      const exdevError = Object.assign(new Error('EXDEV'), { code: 'EXDEV' })
+      vi.mocked(fs.rename).mockRejectedValue(exdevError)
+
+      const result = await writeExifData(mockExifTool, '/test.jpg', { make: 'Canon' })
+
+      expect(result.success).toBe(true)
+      expect(fs.copyFile).toHaveBeenCalledWith('/test.jpg_original', result.backupPath)
+      expect(fs.unlink).toHaveBeenCalledWith('/test.jpg_original')
     })
   })
 })

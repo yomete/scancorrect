@@ -1,5 +1,36 @@
 import { ExifTool, Tags } from 'exiftool-vendored'
 import * as fs from 'fs/promises'
+import * as path from 'path'
+import * as crypto from 'crypto'
+
+let backupDir = ''
+
+export function initBackupDir(dir: string): void {
+  backupDir = dir
+}
+
+export function getBackupPath(originalFilePath: string): string {
+  const hash = crypto.createHash('sha256').update(originalFilePath).digest('hex')
+  const ext = path.extname(originalFilePath)
+  return path.join(backupDir, `${hash}${ext}`)
+}
+
+async function ensureBackupDir(): Promise<void> {
+  await fs.mkdir(backupDir, { recursive: true })
+}
+
+async function moveFile(src: string, dest: string): Promise<void> {
+  try {
+    await fs.rename(src, dest)
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code === 'EXDEV') {
+      await fs.copyFile(src, dest)
+      await fs.unlink(src)
+    } else {
+      throw err
+    }
+  }
+}
 
 export interface ExifData {
   make?: string
@@ -213,13 +244,15 @@ export async function writeExifData(
 
     await exiftool.write(filePath, tags, options)
 
-    // Determine backup path if backup was kept
-    const backupPath = keepBackup ? `${filePath}_original` : undefined
-
-    return {
-      success: true,
-      backupPath
+    if (keepBackup) {
+      const exiftoolBackup = `${filePath}_original`
+      const destBackupPath = getBackupPath(filePath)
+      await ensureBackupDir()
+      await moveFile(exiftoolBackup, destBackupPath)
+      return { success: true, backupPath: destBackupPath }
     }
+
+    return { success: true }
   } catch (error) {
     return {
       success: false,
@@ -231,22 +264,15 @@ export async function writeExifData(
 /**
  * Restores a file from its backup
  * @param filePath - Path to the current file to restore
- * @param backupPath - Optional explicit backup path. If not provided, uses filePath + '_original'
- * @returns true if restore was successful, false otherwise
+ * @param backupPath - Optional explicit backup path. If not provided, uses the app data backup directory
  */
 export async function restoreFromBackup(filePath: string, backupPath?: string): Promise<boolean> {
-  const resolvedBackupPath = backupPath || `${filePath}_original`
+  const resolvedBackupPath = backupPath || getBackupPath(filePath)
 
   try {
-    // Check if backup exists
     await fs.access(resolvedBackupPath)
-
-    // Delete the current file
     await fs.unlink(filePath)
-
-    // Rename backup to original filename
-    await fs.rename(resolvedBackupPath, filePath)
-
+    await moveFile(resolvedBackupPath, filePath)
     return true
   } catch (error) {
     console.error(`Failed to restore from backup: ${error}`)

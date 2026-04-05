@@ -163,7 +163,7 @@ export function ProfileWizard({
               <div key={step} className="flex-1 flex items-center">
                 <div className="flex items-center gap-2 flex-1">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                    className={`w-8 h-8 min-w-8 min-h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                       step === currentStep
                         ? "bg-blue-500 text-white"
                         : step < currentStep
