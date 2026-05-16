@@ -19,7 +19,7 @@ interface CustomValues {
 
 interface ProcessingLogEntry {
   id: string
-  timestamp: string
+  timestamp: string | Date
   filePath: string
   filename: string
   profileUsed?: string
@@ -135,6 +135,9 @@ let forceCloseWindow = false
 
 // Function to check dev mode - only call after app is ready
 function isDev(): boolean {
+  if (process.env.NODE_ENV === 'test') {
+    return false
+  }
   return process.env.NODE_ENV === 'development' || !app.isPackaged
 }
 
@@ -166,7 +169,9 @@ function createWindow(): void {
 
   if (isDev()) {
     mainWindow.loadURL('http://localhost:5173')
-    mainWindow.webContents.openDevTools()
+    if (process.env.NODE_ENV === 'development') {
+      mainWindow.webContents.openDevTools()
+    }
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
@@ -621,4 +626,3 @@ ipcMain.handle('set-mapbox-token', (_, token: string | undefined): void => {
     getStore().delete('mapboxAccessToken')
   }
 })
-

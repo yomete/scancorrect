@@ -16,69 +16,45 @@ export default function BeforeAfterSlider({
   afterAlt,
 }: BeforeAfterSliderProps) {
   const [sliderPosition, setSliderPosition] = useState(50);
-  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = useCallback(() => {
-    setIsDragging(true);
+    isDraggingRef.current = true;
   }, []);
 
   const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
+    isDraggingRef.current = false;
   }, []);
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent | MouseEvent) => {
-      if (!isDragging || !containerRef.current) return;
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDraggingRef.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    setSliderPosition(Math.max(0, Math.min(100, (x / rect.width) * 100)));
+  }, []);
 
-      const rect = containerRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      setSliderPosition(percentage);
-    },
-    [isDragging]
-  );
-
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      if (!isDragging || !containerRef.current) return;
-
-      const rect = containerRef.current.getBoundingClientRect();
-      const x = e.touches[0].clientX - rect.left;
-      const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      setSliderPosition(percentage);
-    },
-    [isDragging]
-  );
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDraggingRef.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.touches[0].clientX - rect.left;
+    setSliderPosition(Math.max(0, Math.min(100, (x / rect.width) * 100)));
+  }, []);
 
   useEffect(() => {
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      handleMouseMove(e);
-    };
-
-    const handleGlobalMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      document.addEventListener("mousemove", handleGlobalMouseMove);
-      document.addEventListener("mouseup", handleGlobalMouseUp);
-    }
-
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
     return () => {
-      document.removeEventListener("mousemove", handleGlobalMouseMove);
-      document.removeEventListener("mouseup", handleGlobalMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, handleMouseMove]);
+  }, [handleMouseMove, handleMouseUp]);
 
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div
         ref={containerRef}
         className="relative w-full overflow-hidden rounded-xl cursor-col-resize select-none shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseUp}
       >

@@ -50,6 +50,7 @@ export interface ExifData {
   filmStock?: string
   location?: LocationValue
   dateOriginal?: string // YYYY-MM-DD format
+  dateTimeOriginal?: string // Full ISO timestamp for GPX matching
 }
 
 // User's decision for merge conflicts between existing and new values
@@ -61,7 +62,7 @@ export interface MergeDecision {
 // Processing log entry for tracking all edits
 export interface ProcessingLogEntry {
   id: string
-  timestamp: Date
+  timestamp: Date | string
   filePath: string
   filename: string
   profileUsed?: string

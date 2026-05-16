@@ -5,13 +5,6 @@ module.exports = {
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
-  theme: {
-    extend: {
-      fontFamily: {
-        serif: ['var(--font-fraunces)', 'Georgia', 'serif'],
-        sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'sans-serif'],
-      },
-    },
-  },
+  theme: {},
   plugins: [],
 }

@@ -11,7 +11,7 @@ interface SingleImageEditorProps {
   activeProfile: CameraProfile | null;
 }
 
-const FIELD_LABELS: Record<keyof ExifData, string> = {
+const FIELD_LABELS: Partial<Record<keyof ExifData, string>> = {
   make: "Camera Make",
   model: "Camera Model",
   lens: "Lens",
@@ -74,7 +74,7 @@ export function SingleImageEditor({
     ];
     return allFields
       .filter((f) => !populatedFields.includes(f))
-      .map((f) => ({ field: f, label: FIELD_LABELS[f] }));
+      .map((f) => ({ field: f, label: FIELD_LABELS[f] || f }));
   }, [populatedFields]);
 
   const handleFieldChange = (field: keyof ExifData, value: unknown) => {
@@ -140,7 +140,7 @@ export function SingleImageEditor({
           <FieldEditor
             key={field}
             field={field}
-            label={FIELD_LABELS[field]}
+            label={FIELD_LABELS[field] || field}
             existingValue={existingExif[field] as string | number | undefined}
             pendingValue={pendingChanges[field] as string | number | undefined}
             onChange={(value) => handleFieldChange(field, value)}

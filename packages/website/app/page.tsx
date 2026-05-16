@@ -2,6 +2,9 @@
 
 import BeforeAfterSlider from "../components/BeforeAfterSlider";
 import { Header } from "../components/Header";
+import { ScrollLink } from "../components/ScrollLink";
+
+const DOWNLOAD_PLATFORMS = ['macOS', 'Windows', 'Linux'] as const;
 
 export default function Home() {
   return (
@@ -29,12 +32,12 @@ export default function Home() {
           afterAlt="After: Proper camera metadata"
         />
         <div className="text-center mt-8">
-          <a
+          <ScrollLink
             href="#download"
             className="inline-block bg-[#1a1a1a] text-white px-8 py-3.5 rounded-full text-sm font-medium hover:bg-[#333] transition-colors"
           >
             Download Free
-          </a>
+          </ScrollLink>
         </div>
       </section>
 
@@ -74,15 +77,11 @@ export default function Home() {
             Free. No account required. Works offline.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-16">
-            <a href="#" className="bg-[#1a1a1a] text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-[#333] transition-colors">
-              macOS
-            </a>
-            <a href="#" className="bg-[#1a1a1a] text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-[#333] transition-colors">
-              Windows
-            </a>
-            <a href="#" className="bg-[#1a1a1a] text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-[#333] transition-colors">
-              Linux
-            </a>
+            {DOWNLOAD_PLATFORMS.map((platform) => (
+              <a key={platform} href="#" className="bg-[#1a1a1a] text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-[#333] transition-colors">
+                {platform}
+              </a>
+            ))}
           </div>
           <div className="border-t border-[#e5e0da] pt-8 text-sm text-[#6b6560]">
             ScanCorrect by Yomi Eluwande

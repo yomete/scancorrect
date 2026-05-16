@@ -1,10 +1,8 @@
 'use client';
 
-import { type ReactNode } from 'react';
-
 interface ScrollLinkProps {
   href: string;
-  children: ReactNode;
+  children: any;
   className?: string;
   onClick?: () => void;
 }

@@ -8,7 +8,7 @@ interface LogEntryProps {
   canUndo: boolean;
 }
 
-function formatTimestamp(date: Date): string {
+function formatTimestamp(date: Date | string): string {
   const now = new Date();
   const entryDate = new Date(date);
 

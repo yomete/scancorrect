@@ -10,7 +10,7 @@ interface MultiImageEditorProps {
   activeProfile: CameraProfile | null;
 }
 
-const FIELD_LABELS: Record<keyof ExifData, string> = {
+const FIELD_LABELS: Partial<Record<keyof ExifData, string>> = {
   make: "Camera Make",
   model: "Camera Model",
   lens: "Lens",
@@ -75,7 +75,7 @@ export function MultiImageEditor({
     ];
     return allFields
       .filter((f) => !shownFields.includes(f))
-      .map((f) => ({ field: f, label: FIELD_LABELS[f] }));
+      .map((f) => ({ field: f, label: FIELD_LABELS[f] || f }));
   }, [commonFields]);
 
   const handleFieldChange = (field: keyof ExifData, value: unknown) => {

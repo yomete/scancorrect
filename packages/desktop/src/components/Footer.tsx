@@ -21,9 +21,7 @@ export function Footer({
   onProfileDelete,
   onProfileEdit,
 }: FooterProps) {
-  const getCurrentProfile = () => {
-    return profiles.find((p) => p.id === selectedProfile);
-  };
+  const currentProfile = profiles.find((p) => p.id === selectedProfile);
 
   return (
     <footer className="bg-white/95 dark:bg-neutral-700 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 px-3 py-2">
@@ -40,9 +38,9 @@ export function Footer({
         </button>
 
         <div className="flex-1 min-w-0">
-          {getCurrentProfile() ? (
+          {currentProfile ? (
             <span className="block font-normal text-gray-800 dark:text-gray-400 text-xs leading-tight">
-              {getCurrentProfile()?.name}
+              {currentProfile.name}
             </span>
           ) : (
             <span className="text-gray-400 dark:text-gray-500 italic text-sm">

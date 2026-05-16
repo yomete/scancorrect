@@ -48,7 +48,7 @@ interface CustomValues {
 
 interface ProcessingLogEntry {
   id: string
-  timestamp: string
+  timestamp: string | Date
   filePath: string
   filename: string
   profileUsed?: string
