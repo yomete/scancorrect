@@ -23,6 +23,19 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 type AppView = "dropzone" | "grid";
 
+const PROFILE_FIELDS: (keyof ExifData)[] = [
+  "make",
+  "model",
+  "lens",
+  "iso",
+  "aperture",
+  "shutterSpeed",
+  "focalLength",
+  "exposureComp",
+  "filmStock",
+  "location",
+];
+
 // Extend window for close confirmation
 declare global {
   interface Window {
@@ -158,16 +171,60 @@ function App() {
     }
   };
 
+  const applyProfileToPendingChanges = (
+    pendingChanges: ExifData | undefined,
+    profile: CameraProfile
+  ): ExifData => {
+    const nextChanges: ExifData = { ...pendingChanges };
+
+    PROFILE_FIELDS.forEach((field) => {
+      delete nextChanges[field];
+    });
+
+    if (profile.make) nextChanges.make = profile.make;
+    if (profile.model) nextChanges.model = profile.model;
+    if (profile.lens) nextChanges.lens = profile.lens;
+    if (profile.defaults) {
+      if (profile.defaults.iso !== undefined) nextChanges.iso = profile.defaults.iso;
+      if (profile.defaults.aperture !== undefined) nextChanges.aperture = profile.defaults.aperture;
+      if (profile.defaults.shutterSpeed !== undefined) nextChanges.shutterSpeed = profile.defaults.shutterSpeed;
+      if (profile.defaults.focalLength !== undefined) nextChanges.focalLength = profile.defaults.focalLength;
+      if (profile.defaults.exposureComp !== undefined) nextChanges.exposureComp = profile.defaults.exposureComp;
+      if (profile.defaults.filmStock) nextChanges.filmStock = profile.defaults.filmStock;
+      if (profile.defaults.location) nextChanges.location = profile.defaults.location;
+    }
+
+    return nextChanges;
+  };
+
+  const handleProfileSelect = (profileId: string) => {
+    setSelectedProfile(profileId);
+
+    const profile = profiles.find((p) => p.id === profileId);
+    if (!profile || images.length === 0) return;
+
+    setImages((prev) =>
+      prev.map((img) => ({
+        ...img,
+        pendingChanges: applyProfileToPendingChanges(img.pendingChanges, profile),
+        status: img.status === "success" ? "pending" : img.status,
+      }))
+    );
+  };
+
   const handleFilesDropped = async (filePaths: string[]) => {
+    const existingPaths = new Set(images.map((image) => image.path));
+    const pathsToAdd = filePaths.filter((path) => !existingPaths.has(path));
+    if (pathsToAdd.length === 0) return;
+
     // Create ImageFile objects for each dropped file
-    const newImages: ImageFile[] = filePaths.map((path) => ({
+    const newImages: ImageFile[] = pathsToAdd.map((path) => ({
       path,
       filename: path.split("/").pop() || path.split("\\").pop() || path,
       selected: false,
       status: "pending" as const,
     }));
 
-    setImages(newImages);
     setCurrentView("grid");
 
     // Read EXIF data for each image and apply profile defaults
@@ -182,21 +239,9 @@ function App() {
           }
 
           // Start with profile defaults as pending changes
-          const pendingChanges: ExifData = {};
-          if (profile) {
-            if (profile.make) pendingChanges.make = profile.make;
-            if (profile.model) pendingChanges.model = profile.model;
-            if (profile.lens) pendingChanges.lens = profile.lens;
-            if (profile.defaults) {
-              if (profile.defaults.iso) pendingChanges.iso = profile.defaults.iso;
-              if (profile.defaults.aperture) pendingChanges.aperture = profile.defaults.aperture;
-              if (profile.defaults.shutterSpeed) pendingChanges.shutterSpeed = profile.defaults.shutterSpeed;
-              if (profile.defaults.focalLength) pendingChanges.focalLength = profile.defaults.focalLength;
-              if (profile.defaults.exposureComp) pendingChanges.exposureComp = profile.defaults.exposureComp;
-              if (profile.defaults.filmStock) pendingChanges.filmStock = profile.defaults.filmStock;
-              if (profile.defaults.location) pendingChanges.location = profile.defaults.location;
-            }
-          }
+          const pendingChanges = profile
+            ? applyProfileToPendingChanges(undefined, profile)
+            : {};
 
           return {
             ...image,
@@ -209,7 +254,11 @@ function App() {
       })
     );
 
-    setImages(updatedImages);
+    setImages((prev) => {
+      const loadedPaths = new Set(prev.map((image) => image.path));
+      const imagesToAppend = updatedImages.filter((image) => !loadedPaths.has(image.path));
+      return [...prev, ...imagesToAppend];
+    });
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -324,24 +373,9 @@ function App() {
       prev.map((img) => {
         if (!selectedImageIds.has(img.path)) return img;
 
-        const pendingChanges: ExifData = { ...img.pendingChanges };
-
-        if (profile.make) pendingChanges.make = profile.make;
-        if (profile.model) pendingChanges.model = profile.model;
-        if (profile.lens) pendingChanges.lens = profile.lens;
-        if (profile.defaults) {
-          if (profile.defaults.iso) pendingChanges.iso = profile.defaults.iso;
-          if (profile.defaults.aperture) pendingChanges.aperture = profile.defaults.aperture;
-          if (profile.defaults.shutterSpeed) pendingChanges.shutterSpeed = profile.defaults.shutterSpeed;
-          if (profile.defaults.focalLength) pendingChanges.focalLength = profile.defaults.focalLength;
-          if (profile.defaults.exposureComp) pendingChanges.exposureComp = profile.defaults.exposureComp;
-          if (profile.defaults.filmStock) pendingChanges.filmStock = profile.defaults.filmStock;
-          if (profile.defaults.location) pendingChanges.location = profile.defaults.location;
-        }
-
         return {
           ...img,
-          pendingChanges,
+          pendingChanges: applyProfileToPendingChanges(img.pendingChanges, profile),
         };
       })
     );
@@ -616,7 +650,7 @@ function App() {
         profiles={profiles}
         selectedProfile={selectedProfile}
         onAddProfile={() => setIsCreatingProfile(true)}
-        onProfileSelect={setSelectedProfile}
+        onProfileSelect={handleProfileSelect}
         onProfileDelete={handleDeleteProfile}
         onProfileEdit={handleEditProfile}
       />

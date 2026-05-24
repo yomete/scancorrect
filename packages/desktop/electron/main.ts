@@ -29,6 +29,37 @@ interface ProcessingLogEntry {
   backupPath?: string
 }
 
+interface FileSnapshot {
+  size: number
+  modifiedAt: string
+}
+
+interface ExifSnapshot {
+  data?: ExifData
+  error?: string
+}
+
+interface MetadataWriteLogEntry {
+  schemaVersion: 1
+  event: 'metadata.write'
+  timestamp: string
+  appVersion: string
+  filePath: string
+  filename: string
+  keepBackup: boolean
+  requestedChanges: ExifData
+  before: ExifSnapshot
+  after?: ExifSnapshot
+  fileBefore?: FileSnapshot
+  fileAfter?: FileSnapshot
+  durationMs: number
+  result: {
+    success: boolean
+    backupPath?: string
+    error?: string
+  }
+}
+
 interface SavedLocation {
   id: string
   name: string
@@ -114,6 +145,36 @@ function ensureThumbnailCacheDir(): void {
 // Generate a hash for a file path to use as cache filename
 function getFilePathHash(filePath: string): string {
   return crypto.createHash('sha256').update(filePath).digest('hex')
+}
+
+function getMetadataWriteLogPath(): string {
+  return path.join(app.getPath('userData'), 'logs', 'metadata-writes.jsonl')
+}
+
+async function appendMetadataWriteLog(entry: MetadataWriteLogEntry): Promise<void> {
+  const logPath = getMetadataWriteLogPath()
+  await fs.promises.mkdir(path.dirname(logPath), { recursive: true })
+  await fs.promises.appendFile(logPath, `${JSON.stringify(entry)}\n`, 'utf8')
+}
+
+async function getFileSnapshot(filePath: string): Promise<FileSnapshot | undefined> {
+  try {
+    const stat = await fs.promises.stat(filePath)
+    return {
+      size: stat.size,
+      modifiedAt: stat.mtime.toISOString()
+    }
+  } catch {
+    return undefined
+  }
+}
+
+async function getExifSnapshot(filePath: string): Promise<ExifSnapshot> {
+  try {
+    return { data: await readExifData(exiftool, filePath) }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Unknown error reading EXIF data' }
+  }
 }
 
 // Initialize ExifTool with proper configuration
@@ -349,12 +410,44 @@ ipcMain.handle('read-exif', async (_, filePath: string): Promise<{ data: ExifDat
 
 // Write EXIF data to file
 ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData, keepBackup: boolean = true): Promise<{ success: boolean; backupPath?: string; error?: string }> => {
+  const startedAt = Date.now()
+  const before = await getExifSnapshot(filePath)
+  const fileBefore = await getFileSnapshot(filePath)
+  let result: { success: boolean; backupPath?: string; error?: string }
+  let after: ExifSnapshot | undefined
+  let fileAfter: FileSnapshot | undefined
+
   try {
-    const result = await writeExifData(exiftool, filePath, data, keepBackup)
-    return result
+    result = await writeExifData(exiftool, filePath, data, keepBackup)
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error writing EXIF data' }
+    result = { success: false, error: error instanceof Error ? error.message : 'Unknown error writing EXIF data' }
   }
+
+  after = await getExifSnapshot(filePath)
+  fileAfter = await getFileSnapshot(filePath)
+
+  try {
+    await appendMetadataWriteLog({
+      schemaVersion: 1,
+      event: 'metadata.write',
+      timestamp: new Date().toISOString(),
+      appVersion: app.getVersion(),
+      filePath,
+      filename: path.basename(filePath),
+      keepBackup,
+      requestedChanges: data,
+      before,
+      after,
+      fileBefore,
+      fileAfter,
+      durationMs: Date.now() - startedAt,
+      result
+    })
+  } catch (error) {
+    console.warn('Failed to append metadata write log:', error)
+  }
+
+  return result
 })
 
 // Restore from backup

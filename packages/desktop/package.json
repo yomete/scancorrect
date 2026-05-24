@@ -1,7 +1,7 @@
 {
   "name": "desktop",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.5",
   "description": "ScanCorrect - Desktop Electron application",
   "author": "ScanCorrect",
   "main": "dist-electron/main.js",
@@ -63,6 +63,7 @@
     "productName": "ScanCorrect",
     "electronVersion": "31.0.2",
     "npmRebuild": false,
+    "icon": "build/icon.icns",
     "directories": {
       "output": "../../release",
       "app": "."
