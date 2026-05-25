@@ -228,9 +228,16 @@ export function LogEntry({ entry, onUndo, canUndo }: LogEntryProps) {
             {/* Changes summary or error */}
             <div className="mt-1.5">
               {entry.success ? (
-                <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-                  {changesSummary}
-                </p>
+                <>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                    {changesSummary}
+                  </p>
+                  {entry.warning && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      {entry.warning}
+                    </p>
+                  )}
+                </>
               ) : (
                 <p className="text-sm text-red-600 dark:text-red-400">
                   {entry.error || "Unknown error"}

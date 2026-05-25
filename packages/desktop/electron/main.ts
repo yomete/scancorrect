@@ -28,6 +28,7 @@ interface ProcessingLogEntry {
   changesApplied: Partial<ExifData>
   success: boolean
   error?: string
+  warning?: string
   backupPath?: string
 }
 
@@ -68,6 +69,7 @@ interface MetadataWriteLogEntry {
     success: boolean
     backupPath?: string
     error?: string
+    warning?: string
   }
 }
 
@@ -212,6 +214,10 @@ function getMetadataWriteLogPath(): string {
   return path.join(app.getPath('userData'), 'logs', 'metadata-writes.jsonl')
 }
 
+function shouldWriteMetadataDiagnostics(): boolean {
+  return process.env.SCANCORRECT_METADATA_DIAGNOSTICS === '1' || isDev()
+}
+
 async function appendMetadataWriteLog(
   entry: MetadataWriteLogEntry | MetadataVerifyFolderLogEntry | MetadataSpotlightFollowUpLogEntry
 ): Promise<void> {
@@ -347,25 +353,60 @@ async function reimportSpotlightMetadata(filePath: string): Promise<SpotlightRei
   }
 }
 
-function scheduleSpotlightFollowUp(filePath: string, delayMs: number): void {
+async function triggerSpotlightImport(filePath: string): Promise<void> {
+  if (process.platform !== 'darwin') return
+
+  try {
+    await execFileAsync('/usr/bin/mdimport', ['-i', filePath], { timeout: 5000 })
+  } catch (error) {
+    console.warn('Failed to trigger Spotlight import:', error)
+  }
+}
+
+let spotlightTaskActive = false
+const spotlightTasks: Array<() => Promise<void>> = []
+
+function runNextSpotlightTask(): void {
+  if (spotlightTaskActive) return
+
+  const task = spotlightTasks.shift()
+  if (!task) return
+
+  spotlightTaskActive = true
+  void task().finally(() => {
+    spotlightTaskActive = false
+    runNextSpotlightTask()
+  })
+}
+
+function enqueueSpotlightTask(task: () => Promise<void>): void {
+  spotlightTasks.push(task)
+  runNextSpotlightTask()
+}
+
+function scheduleSpotlightFollowUp(filePath: string, delayMs: number, writeDiagnostics: boolean): void {
   const timeout = setTimeout(() => {
-    void (async () => {
+    enqueueSpotlightTask(async () => {
       try {
-        const spotlight = await reimportSpotlightMetadata(filePath)
-        await appendMetadataWriteLog({
-          schemaVersion: 1,
-          event: 'metadata.spotlightFollowUp',
-          timestamp: new Date().toISOString(),
-          appVersion: app.getVersion(),
-          filePath,
-          filename: path.basename(filePath),
-          delayMs,
-          spotlight
-        })
+        if (writeDiagnostics) {
+          const spotlight = await reimportSpotlightMetadata(filePath)
+          await appendMetadataWriteLog({
+            schemaVersion: 1,
+            event: 'metadata.spotlightFollowUp',
+            timestamp: new Date().toISOString(),
+            appVersion: app.getVersion(),
+            filePath,
+            filename: path.basename(filePath),
+            delayMs,
+            spotlight
+          })
+        } else {
+          await triggerSpotlightImport(filePath)
+        }
       } catch (error) {
-        console.warn('Failed to append Spotlight follow-up log:', error)
+        console.warn('Failed to run Spotlight follow-up:', error)
       }
-    })()
+    })
   }, delayMs)
 
   timeout.unref?.()
@@ -569,44 +610,6 @@ ipcMain.handle('delete-profile', (_, profileId: string): void => {
   getStore().set('profiles', filteredProfiles)
 })
 
-ipcMain.handle('edit-exif', async (_, filePaths: string[], profile: CameraProfile): Promise<Array<{file: string, success: boolean, error?: string}>> => {
-  const results: Array<{file: string, success: boolean, error?: string}> = []
-  
-  for (const filePath of filePaths) {
-    try {
-      await editExifData(filePath, profile)
-      results.push({ file: path.basename(filePath), success: true })
-    } catch (error) {
-      results.push({ 
-        file: path.basename(filePath), 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
-  }
-  
-  return results
-})
-
-async function editExifData(filePath: string, profile: CameraProfile): Promise<void> {
-  try {
-    const tags: { [key: string]: string } = {
-      Make: profile.make,
-      Model: profile.model
-    }
-
-    if (profile.lens) {
-      tags.LensModel = profile.lens
-    }
-
-    await exiftool.write(filePath, tags, ['-overwrite_original'])
-  } catch (error) {
-    console.error('ExifTool error:', error)
-    throw new Error(`Failed to edit EXIF data: ${error instanceof Error ? error.message : 'Unknown error'}`)
-  }
-}
-
-
 ipcMain.handle('show-open-dialog', async (): Promise<string[] | undefined> => {
   if (!mainWindow) return undefined
 
@@ -643,14 +646,15 @@ ipcMain.handle('read-exif', async (_, filePath: string): Promise<{ data: ExifDat
 })
 
 // Write EXIF data to file
-ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData, keepBackup: boolean = true): Promise<{ success: boolean; backupPath?: string; error?: string }> => {
+ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData): Promise<{ success: boolean; backupPath?: string; error?: string; warning?: string }> => {
   const startedAt = Date.now()
-  const before = await getExifSnapshot(filePath)
-  const fileBefore = await getFileSnapshot(filePath)
-  let result: { success: boolean; backupPath?: string; error?: string }
+  const keepBackup = true
+  const writeDiagnostics = shouldWriteMetadataDiagnostics()
+  const before = writeDiagnostics ? await getExifSnapshot(filePath) : undefined
+  const fileBefore = writeDiagnostics ? await getFileSnapshot(filePath) : undefined
+  let result: { success: boolean; backupPath?: string; error?: string; warning?: string }
   let after: ExifSnapshot | undefined
   let fileAfter: FileSnapshot | undefined
-  let spotlight: SpotlightReimportResult | undefined
 
   try {
     result = await writeExifData(exiftool, filePath, data, keepBackup)
@@ -658,33 +662,37 @@ ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData, keepBac
     result = { success: false, error: error instanceof Error ? error.message : 'Unknown error writing EXIF data' }
   }
 
-  after = await getExifSnapshot(filePath)
-  fileAfter = await getFileSnapshot(filePath)
-  if (result.success) {
-    spotlight = await reimportSpotlightMetadata(filePath)
-    scheduleSpotlightFollowUp(filePath, 30000)
+  if (writeDiagnostics) {
+    after = await getExifSnapshot(filePath)
+    fileAfter = await getFileSnapshot(filePath)
   }
 
-  try {
-    await appendMetadataWriteLog({
-      schemaVersion: 1,
-      event: 'metadata.write',
-      timestamp: new Date().toISOString(),
-      appVersion: app.getVersion(),
-      filePath,
-      filename: path.basename(filePath),
-      keepBackup,
-      requestedChanges: data,
-      before,
-      after,
-      fileBefore,
-      fileAfter,
-      spotlight,
-      durationMs: Date.now() - startedAt,
-      result
-    })
-  } catch (error) {
-    console.warn('Failed to append metadata write log:', error)
+  if (result.success) {
+    scheduleSpotlightFollowUp(filePath, 0, writeDiagnostics)
+    scheduleSpotlightFollowUp(filePath, 30000, writeDiagnostics)
+  }
+
+  if (writeDiagnostics && before) {
+    try {
+      await appendMetadataWriteLog({
+        schemaVersion: 1,
+        event: 'metadata.write',
+        timestamp: new Date().toISOString(),
+        appVersion: app.getVersion(),
+        filePath,
+        filename: path.basename(filePath),
+        keepBackup,
+        requestedChanges: data,
+        before,
+        after,
+        fileBefore,
+        fileAfter,
+        durationMs: Date.now() - startedAt,
+        result
+      })
+    } catch (error) {
+      console.warn('Failed to append metadata write log:', error)
+    }
   }
 
   return result
@@ -735,23 +743,6 @@ ipcMain.handle('restore-backup', async (_, filePath: string, backupPath: string)
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error restoring backup' }
   }
-})
-
-// Cleanup multiple backup files
-ipcMain.handle('cleanup-backups', async (_, backupPaths: string[]): Promise<{ success: boolean; errors: string[] }> => {
-  const errors: string[] = []
-
-  for (const backupPath of backupPaths) {
-    try {
-      if (fs.existsSync(backupPath)) {
-        fs.unlinkSync(backupPath)
-      }
-    } catch (error) {
-      errors.push(`Failed to delete ${backupPath}: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-  }
-
-  return { success: errors.length === 0, errors }
 })
 
 // Get custom dropdown values

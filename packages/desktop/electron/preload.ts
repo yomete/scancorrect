@@ -8,12 +8,6 @@ interface CameraProfile {
   lens?: string
 }
 
-interface ProcessResult {
-  file: string
-  success: boolean
-  error?: string
-}
-
 interface GeocodingResult {
   displayName: string
   latitude: number
@@ -55,6 +49,7 @@ interface ProcessingLogEntry {
   changesApplied: Partial<ExifData>
   success: boolean
   error?: string
+  warning?: string
   backupPath?: string
 }
 
@@ -129,7 +124,6 @@ export interface ElectronAPI {
   getProfiles: () => Promise<CameraProfile[]>
   saveProfile: (profile: CameraProfile) => Promise<void>
   deleteProfile: (profileId: string) => Promise<void>
-  editExif: (filePaths: string[], profile: CameraProfile) => Promise<ProcessResult[]>
   showOpenDialog: () => Promise<string[] | undefined>
 
   // Geocoding
@@ -137,12 +131,11 @@ export interface ElectronAPI {
 
   // EXIF reading and writing
   readExif: (filePath: string) => Promise<{ data: ExifData; isScanner: boolean } | { error: string }>
-  writeExif: (filePath: string, data: ExifData, keepBackup?: boolean) => Promise<{ success: boolean; backupPath?: string; error?: string }>
+  writeExif: (filePath: string, data: ExifData) => Promise<{ success: boolean; backupPath?: string; error?: string; warning?: string }>
   verifyFolderMetadata: () => Promise<FolderMetadataVerificationResult | { error: string }>
 
   // Backup management
   restoreBackup: (filePath: string, backupPath: string) => Promise<{ success: boolean; error?: string }>
-  cleanupBackups: (backupPaths: string[]) => Promise<{ success: boolean; errors: string[] }>
 
   // Custom values management
   getCustomValues: () => Promise<CustomValues>
@@ -205,8 +198,6 @@ const electronAPI: ElectronAPI = {
   getProfiles: () => ipcRenderer.invoke('get-profiles'),
   saveProfile: (profile: CameraProfile) => ipcRenderer.invoke('save-profile', profile),
   deleteProfile: (profileId: string) => ipcRenderer.invoke('delete-profile', profileId),
-  editExif: (filePaths: string[], profile: CameraProfile) =>
-    ipcRenderer.invoke('edit-exif', filePaths, profile),
   showOpenDialog: () => ipcRenderer.invoke('show-open-dialog'),
 
   // Geocoding
@@ -214,15 +205,13 @@ const electronAPI: ElectronAPI = {
 
   // EXIF reading and writing
   readExif: (filePath: string) => ipcRenderer.invoke('read-exif', filePath),
-  writeExif: (filePath: string, data: ExifData, keepBackup: boolean = true) =>
-    ipcRenderer.invoke('write-exif', filePath, data, keepBackup),
+  writeExif: (filePath: string, data: ExifData) =>
+    ipcRenderer.invoke('write-exif', filePath, data),
   verifyFolderMetadata: () => ipcRenderer.invoke('verify-folder-metadata'),
 
   // Backup management
   restoreBackup: (filePath: string, backupPath: string) =>
     ipcRenderer.invoke('restore-backup', filePath, backupPath),
-  cleanupBackups: (backupPaths: string[]) =>
-    ipcRenderer.invoke('cleanup-backups', backupPaths),
 
   // Custom values management
   getCustomValues: () => ipcRenderer.invoke('get-custom-values'),

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { readExifData, writeExifData, restoreFromBackup, cleanupBackup, cleanupBackups, initBackupDir, getBackupPath, ExifData } from '../exif'
+import { readExifData, writeExifData, restoreFromBackup, initBackupDir, getBackupPath, ExifData } from '../exif'
 import type { ExifTool, Tags } from 'exiftool-vendored'
 
 // Mock fs/promises
@@ -359,11 +359,37 @@ describe('exif', () => {
       expect(result.success).toBe(false)
       expect(result.error).toBe('Unknown error writing EXIF data')
     })
+
+    it('should keep the ExifTool backup path if moving it to app data fails', async () => {
+      vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined)
+      vi.mocked(fs.rename).mockRejectedValue(new Error('Permission denied'))
+      vi.mocked(fs.access).mockResolvedValue(undefined)
+
+      const result = await writeExifData(mockExifTool, '/test.jpg', { make: 'Canon' })
+
+      expect(result.success).toBe(true)
+      expect(result.backupPath).toBe('/test.jpg_original')
+      expect(result.warning).toContain('backup could not be moved')
+    })
+
+    it('should fail loudly if a write completes but no backup can be verified', async () => {
+      vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined)
+      vi.mocked(fs.rename).mockRejectedValue(new Error('Permission denied'))
+      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'))
+
+      const result = await writeExifData(mockExifTool, '/test.jpg', { make: 'Canon' })
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('no backup could be verified')
+    })
   })
 
   describe('restoreFromBackup', () => {
     it('should restore file from backup', async () => {
       vi.mocked(fs.access).mockResolvedValue(undefined)
+      vi.mocked(fs.copyFile).mockResolvedValue(undefined)
       vi.mocked(fs.unlink).mockResolvedValue(undefined)
       vi.mocked(fs.rename).mockResolvedValue(undefined)
 
@@ -372,19 +398,40 @@ describe('exif', () => {
 
       expect(result).toBe(true)
       expect(fs.access).toHaveBeenCalledWith(expectedBackupPath)
-      expect(fs.unlink).toHaveBeenCalledWith('/test.jpg')
-      expect(fs.rename).toHaveBeenCalledWith(expectedBackupPath, '/test.jpg')
+      expect(fs.copyFile).toHaveBeenCalledWith(
+        expectedBackupPath,
+        expect.stringMatching(/^\/test\.jpg\.scancorrect-restore-/)
+      )
+      expect(fs.rename).toHaveBeenCalledWith(
+        '/test.jpg',
+        expect.stringMatching(/^\/test\.jpg\.scancorrect-current-/)
+      )
+      expect(fs.rename).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/test\.jpg\.scancorrect-restore-/),
+        '/test.jpg'
+      )
+      expect(fs.unlink).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/test\.jpg\.scancorrect-current-/)
+      )
     })
 
     it('should use explicit backup path if provided', async () => {
       vi.mocked(fs.access).mockResolvedValue(undefined)
+      vi.mocked(fs.copyFile).mockResolvedValue(undefined)
       vi.mocked(fs.unlink).mockResolvedValue(undefined)
       vi.mocked(fs.rename).mockResolvedValue(undefined)
 
       await restoreFromBackup('/test.jpg', '/backup/test.jpg')
 
       expect(fs.access).toHaveBeenCalledWith('/backup/test.jpg')
-      expect(fs.rename).toHaveBeenCalledWith('/backup/test.jpg', '/test.jpg')
+      expect(fs.copyFile).toHaveBeenCalledWith(
+        '/backup/test.jpg',
+        expect.stringMatching(/^\/test\.jpg\.scancorrect-restore-/)
+      )
+      expect(fs.rename).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/test\.jpg\.scancorrect-restore-/),
+        '/test.jpg'
+      )
     })
 
     it('should return false if backup does not exist', async () => {
@@ -395,46 +442,38 @@ describe('exif', () => {
       expect(result).toBe(false)
     })
 
-    it('should return false if delete fails', async () => {
+    it('should return false if current file cannot be moved aside', async () => {
       vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.unlink).mockRejectedValue(new Error('Permission denied'))
+      vi.mocked(fs.copyFile).mockResolvedValue(undefined)
+      vi.mocked(fs.rename).mockRejectedValue(new Error('Permission denied'))
 
       const result = await restoreFromBackup('/test.jpg')
 
       expect(result).toBe(false)
+      expect(fs.copyFile).toHaveBeenCalledWith(
+        getBackupPath('/test.jpg'),
+        expect.stringMatching(/^\/test\.jpg\.scancorrect-restore-/)
+      )
+      expect(fs.rename).toHaveBeenCalledWith(
+        '/test.jpg',
+        expect.stringMatching(/^\/test\.jpg\.scancorrect-current-/)
+      )
     })
-  })
 
-  describe('cleanupBackup', () => {
-    it('should delete backup file', async () => {
+    it('should roll the current file back if the restored backup cannot move into place', async () => {
       vi.mocked(fs.access).mockResolvedValue(undefined)
+      vi.mocked(fs.copyFile).mockResolvedValue(undefined)
       vi.mocked(fs.unlink).mockResolvedValue(undefined)
+      vi.mocked(fs.rename)
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('Restore rename failed'))
+        .mockResolvedValueOnce(undefined)
 
-      await cleanupBackup('/test.jpg_original')
+      const result = await restoreFromBackup('/test.jpg')
 
-      expect(fs.access).toHaveBeenCalledWith('/test.jpg_original')
-      expect(fs.unlink).toHaveBeenCalledWith('/test.jpg_original')
-    })
-
-    it('should silently ignore if backup does not exist', async () => {
-      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'))
-
-      await expect(cleanupBackup('/nonexistent')).resolves.not.toThrow()
-    })
-  })
-
-  describe('cleanupBackups', () => {
-    it('should delete multiple backup files', async () => {
-      vi.mocked(fs.access).mockResolvedValue(undefined)
-      vi.mocked(fs.unlink).mockResolvedValue(undefined)
-
-      await cleanupBackups(['/test1.jpg_original', '/test2.jpg_original'])
-
-      expect(fs.unlink).toHaveBeenCalledTimes(2)
-    })
-
-    it('should handle empty array', async () => {
-      await expect(cleanupBackups([])).resolves.not.toThrow()
+      expect(result).toBe(false)
+      const currentBackupPath = vi.mocked(fs.rename).mock.calls[0][1]
+      expect(fs.rename).toHaveBeenCalledWith(currentBackupPath, '/test.jpg')
     })
   })
 

@@ -10,7 +10,6 @@ vi.stubGlobal('electronAPI', {
   writeExif: vi.fn().mockResolvedValue({ success: true }),
   verifyFolderMetadata: vi.fn().mockResolvedValue({ error: 'Verification canceled' }),
   restoreBackup: vi.fn().mockResolvedValue(true),
-  cleanupBackups: vi.fn().mockResolvedValue(undefined),
   getCustomValues: vi.fn().mockResolvedValue({
     isoValues: [],
     apertureValues: [],

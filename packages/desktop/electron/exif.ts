@@ -55,6 +55,7 @@ export interface WriteResult {
   success: boolean
   backupPath?: string
   error?: string
+  warning?: string
 }
 
 // Extended Tags interface for properties not in exiftool-vendored's TypeScript definitions
@@ -248,8 +249,24 @@ export async function writeExifData(
       const exiftoolBackup = `${filePath}_original`
       const destBackupPath = getBackupPath(filePath)
       await ensureBackupDir()
-      await moveFile(exiftoolBackup, destBackupPath)
-      return { success: true, backupPath: destBackupPath }
+      try {
+        await moveFile(exiftoolBackup, destBackupPath)
+        return { success: true, backupPath: destBackupPath }
+      } catch (backupError) {
+        try {
+          await fs.access(exiftoolBackup)
+          return {
+            success: true,
+            backupPath: exiftoolBackup,
+            warning: `Metadata was written, but the backup could not be moved to the app backup folder: ${backupError instanceof Error ? backupError.message : 'Unknown backup error'}`
+          }
+        } catch {
+          return {
+            success: false,
+            error: `Metadata may have been written, but no backup could be verified: ${backupError instanceof Error ? backupError.message : 'Unknown backup error'}`
+          }
+        }
+      }
     }
 
     return { success: true }
@@ -268,36 +285,57 @@ export async function writeExifData(
  */
 export async function restoreFromBackup(filePath: string, backupPath?: string): Promise<boolean> {
   const resolvedBackupPath = backupPath || getBackupPath(filePath)
+  const restoreId = crypto.randomUUID()
+  const restoreTempPath = `${filePath}.scancorrect-restore-${restoreId}`
+  const currentBackupPath = `${filePath}.scancorrect-current-${restoreId}`
+  let restoreTempCreated = false
+  let currentMovedAside = false
 
   try {
     await fs.access(resolvedBackupPath)
-    await fs.unlink(filePath)
-    await moveFile(resolvedBackupPath, filePath)
+    await fs.copyFile(resolvedBackupPath, restoreTempPath)
+    restoreTempCreated = true
+    await fs.rename(filePath, currentBackupPath)
+    currentMovedAside = true
+    try {
+      await fs.rename(restoreTempPath, filePath)
+      restoreTempCreated = false
+    } catch (error) {
+      try {
+        await fs.rename(currentBackupPath, filePath)
+        currentMovedAside = false
+      } catch (rollbackError) {
+        console.error(`Failed to roll current file back after restore error: ${rollbackError}`)
+      }
+      throw error
+    }
+
+    try {
+      await fs.unlink(currentBackupPath)
+      currentMovedAside = false
+    } catch (error) {
+      console.warn(`Restored file, but could not remove temporary current-file backup: ${error}`)
+    }
+
     return true
   } catch (error) {
+    if (restoreTempCreated) {
+      try {
+        await fs.unlink(restoreTempPath)
+      } catch {
+        // Ignore cleanup errors; preserving the original file is more important.
+      }
+    }
+
+    if (currentMovedAside) {
+      try {
+        await fs.rename(currentBackupPath, filePath)
+      } catch {
+        // If this fails, surface the restore failure below.
+      }
+    }
+
     console.error(`Failed to restore from backup: ${error}`)
     return false
   }
-}
-
-/**
- * Deletes a backup file
- * @param backupPath - Path to the backup file to delete
- */
-export async function cleanupBackup(backupPath: string): Promise<void> {
-  try {
-    await fs.access(backupPath)
-    await fs.unlink(backupPath)
-  } catch (error) {
-    // Backup file doesn't exist or couldn't be deleted - silently ignore
-    console.warn(`Could not cleanup backup at ${backupPath}: ${error}`)
-  }
-}
-
-/**
- * Cleans up multiple backup files
- * @param backupPaths - Array of backup file paths to delete
- */
-export async function cleanupBackups(backupPaths: string[]): Promise<void> {
-  await Promise.all(backupPaths.map(cleanupBackup))
 }

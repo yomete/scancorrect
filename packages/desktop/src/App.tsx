@@ -37,6 +37,24 @@ const PROFILE_FIELDS: (keyof ExifData)[] = [
   "location",
 ];
 
+const mergePendingChanges = (
+  pendingChanges: ExifData | undefined,
+  changes: Partial<ExifData>
+): ExifData => {
+  const nextChanges: ExifData = { ...pendingChanges };
+
+  Object.entries(changes).forEach(([field, value]) => {
+    const key = field as keyof ExifData;
+    if (value === undefined) {
+      delete nextChanges[key];
+    } else {
+      nextChanges[key] = value as never;
+    }
+  });
+
+  return nextChanges;
+};
+
 // Extend window for close confirmation
 declare global {
   interface Window {
@@ -333,7 +351,7 @@ function App() {
     setImages((prev) =>
       prev.map((img) =>
         img.path === path
-          ? { ...img, pendingChanges: { ...img.pendingChanges, ...changes } }
+          ? { ...img, pendingChanges: mergePendingChanges(img.pendingChanges, changes) }
           : img
       )
     );
@@ -343,7 +361,7 @@ function App() {
     setImages((prev) =>
       prev.map((img) =>
         paths.includes(img.path)
-          ? { ...img, pendingChanges: { ...img.pendingChanges, ...changes } }
+          ? { ...img, pendingChanges: mergePendingChanges(img.pendingChanges, changes) }
           : img
       )
     );
@@ -427,8 +445,7 @@ function App() {
       try {
         const writeResult = await window.electronAPI.writeExif(
           image.path,
-          image.pendingChanges,
-          true // Keep backup
+          image.pendingChanges
         );
 
         const logEntry: ProcessingLogEntry = {
@@ -440,6 +457,7 @@ function App() {
           changesApplied: image.pendingChanges,
           success: writeResult.success,
           error: writeResult.error,
+          warning: writeResult.warning,
           backupPath: writeResult.backupPath,
         };
 
@@ -522,19 +540,6 @@ function App() {
   };
 
   const handleClearLog = async () => {
-    // Cleanup backup files before clearing log
-    const backupPaths = processingLog
-      .filter((entry) => entry.success && entry.backupPath)
-      .map((entry) => entry.backupPath as string);
-
-    if (backupPaths.length > 0) {
-      try {
-        await window.electronAPI.cleanupBackups(backupPaths);
-      } catch (error) {
-        console.error("Failed to cleanup backups:", error);
-      }
-    }
-
     try {
       await window.electronAPI.clearProcessingLog();
       setProcessingLog([]);

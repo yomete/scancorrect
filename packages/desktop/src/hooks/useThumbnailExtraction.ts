@@ -7,6 +7,31 @@ interface ThumbnailState {
   error: boolean
 }
 
+const MAX_THUMBNAIL_EXTRACTIONS = 4
+let activeThumbnailExtractions = 0
+const thumbnailQueue: Array<() => void> = []
+
+function enqueueThumbnailExtraction(task: () => Promise<string | null>): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    const run = () => {
+      activeThumbnailExtractions += 1
+      task()
+        .then(resolve, reject)
+        .finally(() => {
+          activeThumbnailExtractions -= 1
+          const next = thumbnailQueue.shift()
+          if (next) next()
+        })
+    }
+
+    if (activeThumbnailExtractions < MAX_THUMBNAIL_EXTRACTIONS) {
+      run()
+    } else {
+      thumbnailQueue.push(run)
+    }
+  })
+}
+
 export function useThumbnailExtraction(filePath: string): ThumbnailState {
   const [state, setState] = useState<ThumbnailState>({
     thumbnail: null,
@@ -32,7 +57,9 @@ export function useThumbnailExtraction(filePath: string): ThumbnailState {
         }
 
         // Extract thumbnail
-        const thumbnail = await window.electronAPI.extractThumbnail(filePath)
+        const thumbnail = await enqueueThumbnailExtraction(() =>
+          window.electronAPI.extractThumbnail(filePath)
+        )
 
         if (cancelled) return
 

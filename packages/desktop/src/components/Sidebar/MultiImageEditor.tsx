@@ -84,12 +84,8 @@ export function MultiImageEditor({
   };
 
   const handleRestore = (field: keyof ExifData) => {
-    // For multi-image, restore means removing the pending change from all
-    images.forEach((image) => {
-      const newPending = { ...image.pendingChanges };
-      delete newPending[field];
-      onUpdatePendingChanges([image.path], newPending);
-    });
+    const paths = images.map((image) => image.path);
+    onUpdatePendingChanges(paths, { [field]: undefined });
   };
 
   const handleAddField = (field: string) => {

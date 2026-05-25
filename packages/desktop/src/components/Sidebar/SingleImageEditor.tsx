@@ -82,11 +82,7 @@ export function SingleImageEditor({
   };
 
   const handleRestore = (field: keyof ExifData) => {
-    // Remove the pending change for this field
-    const newPending = { ...pendingChanges };
-    delete newPending[field];
-    // Replace all pending changes with new object
-    onUpdatePendingChanges(image.path, newPending);
+    onUpdatePendingChanges(image.path, { [field]: undefined });
   };
 
   const handleAddField = (field: string) => {

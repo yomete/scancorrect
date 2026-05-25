@@ -69,6 +69,7 @@ export interface ProcessingLogEntry {
   changesApplied: Partial<ExifData>
   success: boolean
   error?: string
+  warning?: string
   backupPath?: string // For undo functionality
 }
 
