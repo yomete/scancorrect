@@ -58,6 +58,38 @@ interface ProcessingLogEntry {
   backupPath?: string
 }
 
+interface FinderMetadataSnapshot {
+  make?: string
+  model?: string
+  contentCreationDate?: string
+  latitude?: string
+  longitude?: string
+  error?: string
+}
+
+interface FolderMetadataVerificationFile {
+  filePath: string
+  filename: string
+  embedded: {
+    data?: ExifData
+    error?: string
+  }
+  finder: FinderMetadataSnapshot
+  embeddedPresent: boolean
+  finderVisible: boolean
+}
+
+interface FolderMetadataVerificationResult {
+  folderPath: string
+  total: number
+  embeddedPresent: number
+  embeddedMissing: number
+  finderVisible: number
+  finderMissing: number
+  logPath: string
+  files: FolderMetadataVerificationFile[]
+}
+
 interface SavedLocation {
   id: string
   name: string
@@ -106,6 +138,7 @@ export interface ElectronAPI {
   // EXIF reading and writing
   readExif: (filePath: string) => Promise<{ data: ExifData; isScanner: boolean } | { error: string }>
   writeExif: (filePath: string, data: ExifData, keepBackup?: boolean) => Promise<{ success: boolean; backupPath?: string; error?: string }>
+  verifyFolderMetadata: () => Promise<FolderMetadataVerificationResult | { error: string }>
 
   // Backup management
   restoreBackup: (filePath: string, backupPath: string) => Promise<{ success: boolean; error?: string }>
@@ -183,6 +216,7 @@ const electronAPI: ElectronAPI = {
   readExif: (filePath: string) => ipcRenderer.invoke('read-exif', filePath),
   writeExif: (filePath: string, data: ExifData, keepBackup: boolean = true) =>
     ipcRenderer.invoke('write-exif', filePath, data, keepBackup),
+  verifyFolderMetadata: () => ipcRenderer.invoke('verify-folder-metadata'),
 
   // Backup management
   restoreBackup: (filePath: string, backupPath: string) =>

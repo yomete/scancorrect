@@ -72,6 +72,22 @@ export interface ProcessingLogEntry {
   backupPath?: string // For undo functionality
 }
 
+export interface FolderMetadataVerificationResult {
+  folderPath: string
+  total: number
+  embeddedPresent: number
+  embeddedMissing: number
+  finderVisible: number
+  finderMissing: number
+  logPath: string
+  files: Array<{
+    filePath: string
+    filename: string
+    embeddedPresent: boolean
+    finderVisible: boolean
+  }>
+}
+
 // User-added custom values for dropdowns
 export interface CustomValues {
   isoValues: number[] // User-added ISO values

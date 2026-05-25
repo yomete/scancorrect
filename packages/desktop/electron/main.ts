@@ -3,6 +3,8 @@ import * as path from 'path'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as crypto from 'crypto'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
 import type Store from 'electron-store'
 import { ExifTool } from 'exiftool-vendored'
 import { geocodeLocation, GeocodingResult } from './geocoding'
@@ -39,6 +41,14 @@ interface ExifSnapshot {
   error?: string
 }
 
+interface SpotlightReimportResult {
+  attempted: boolean
+  durationMs: number
+  finder: FinderMetadataSnapshot
+  finderVisible: boolean
+  error?: string
+}
+
 interface MetadataWriteLogEntry {
   schemaVersion: 1
   event: 'metadata.write'
@@ -52,12 +62,61 @@ interface MetadataWriteLogEntry {
   after?: ExifSnapshot
   fileBefore?: FileSnapshot
   fileAfter?: FileSnapshot
+  spotlight?: SpotlightReimportResult
   durationMs: number
   result: {
     success: boolean
     backupPath?: string
     error?: string
   }
+}
+
+interface FinderMetadataSnapshot {
+  make?: string
+  model?: string
+  contentCreationDate?: string
+  latitude?: string
+  longitude?: string
+  error?: string
+}
+
+interface FolderMetadataVerificationFile {
+  filePath: string
+  filename: string
+  embedded: ExifSnapshot
+  finder: FinderMetadataSnapshot
+  embeddedPresent: boolean
+  finderVisible: boolean
+}
+
+interface FolderMetadataVerificationResult {
+  folderPath: string
+  total: number
+  embeddedPresent: number
+  embeddedMissing: number
+  finderVisible: number
+  finderMissing: number
+  logPath: string
+  files: FolderMetadataVerificationFile[]
+}
+
+interface MetadataVerifyFolderLogEntry extends FolderMetadataVerificationResult {
+  schemaVersion: 1
+  event: 'metadata.verifyFolder'
+  timestamp: string
+  appVersion: string
+  durationMs: number
+}
+
+interface MetadataSpotlightFollowUpLogEntry {
+  schemaVersion: 1
+  event: 'metadata.spotlightFollowUp'
+  timestamp: string
+  appVersion: string
+  filePath: string
+  filename: string
+  delayMs: number
+  spotlight: SpotlightReimportResult
 }
 
 interface SavedLocation {
@@ -134,6 +193,8 @@ function getStore(): Store<StoreSchema> {
 
 // Thumbnail cache directory
 const THUMBNAIL_CACHE_DIR = path.join(os.tmpdir(), 'scancorrect-thumbs')
+const execFileAsync = promisify(execFile)
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.tif', '.tiff'])
 
 // Ensure thumbnail cache directory exists
 function ensureThumbnailCacheDir(): void {
@@ -151,7 +212,9 @@ function getMetadataWriteLogPath(): string {
   return path.join(app.getPath('userData'), 'logs', 'metadata-writes.jsonl')
 }
 
-async function appendMetadataWriteLog(entry: MetadataWriteLogEntry): Promise<void> {
+async function appendMetadataWriteLog(
+  entry: MetadataWriteLogEntry | MetadataVerifyFolderLogEntry | MetadataSpotlightFollowUpLogEntry
+): Promise<void> {
   const logPath = getMetadataWriteLogPath()
   await fs.promises.mkdir(path.dirname(logPath), { recursive: true })
   await fs.promises.appendFile(logPath, `${JSON.stringify(entry)}\n`, 'utf8')
@@ -174,6 +237,177 @@ async function getExifSnapshot(filePath: string): Promise<ExifSnapshot> {
     return { data: await readExifData(exiftool, filePath) }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Unknown error reading EXIF data' }
+  }
+}
+
+function hasEmbeddedMetadata(snapshot: ExifSnapshot): boolean {
+  const data = snapshot.data
+  if (!data) return false
+
+  return Boolean(
+    data.make ||
+    data.model ||
+    data.lens ||
+    data.iso !== undefined ||
+    data.aperture !== undefined ||
+    data.shutterSpeed !== undefined ||
+    data.focalLength !== undefined ||
+    data.exposureComp !== undefined ||
+    data.filmStock ||
+    data.location ||
+    data.dateOriginal ||
+    data.dateTimeOriginal
+  )
+}
+
+function parseMdlsValue(value: string): string | undefined {
+  const trimmed = value.trim()
+  if (!trimmed || trimmed === '(null)') return undefined
+  return trimmed.replace(/^"|"$/g, '')
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function getFinderMetadataSnapshot(filePath: string): Promise<FinderMetadataSnapshot> {
+  if (process.platform !== 'darwin') return {}
+
+  const keys = [
+    'kMDItemAcquisitionMake',
+    'kMDItemAcquisitionModel',
+    'kMDItemContentCreationDate',
+    'kMDItemLatitude',
+    'kMDItemLongitude'
+  ]
+
+  try {
+    const { stdout } = await execFileAsync('/usr/bin/mdls', [
+      '-raw',
+      ...keys.flatMap((key) => ['-name', key]),
+      filePath
+    ])
+    const values = stdout.split(/\0|\r?\n/).filter((value) => value.length > 0)
+
+    return {
+      make: parseMdlsValue(values[0] || ''),
+      model: parseMdlsValue(values[1] || ''),
+      contentCreationDate: parseMdlsValue(values[2] || ''),
+      latitude: parseMdlsValue(values[3] || ''),
+      longitude: parseMdlsValue(values[4] || '')
+    }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Unknown error reading Finder metadata' }
+  }
+}
+
+function hasFinderMetadata(snapshot: FinderMetadataSnapshot): boolean {
+  return Boolean(
+    snapshot.make ||
+    snapshot.model ||
+    snapshot.contentCreationDate ||
+    snapshot.latitude ||
+    snapshot.longitude
+  )
+}
+
+async function reimportSpotlightMetadata(filePath: string): Promise<SpotlightReimportResult> {
+  const startedAt = Date.now()
+
+  if (process.platform !== 'darwin') {
+    return {
+      attempted: false,
+      durationMs: 0,
+      finder: {},
+      finderVisible: false
+    }
+  }
+
+  try {
+    await execFileAsync('/usr/bin/mdimport', ['-i', filePath], { timeout: 5000 })
+    await sleep(500)
+    const finder = await getFinderMetadataSnapshot(filePath)
+
+    return {
+      attempted: true,
+      durationMs: Date.now() - startedAt,
+      finder,
+      finderVisible: hasFinderMetadata(finder)
+    }
+  } catch (error) {
+    const finder = await getFinderMetadataSnapshot(filePath)
+
+    return {
+      attempted: true,
+      durationMs: Date.now() - startedAt,
+      finder,
+      finderVisible: hasFinderMetadata(finder),
+      error: error instanceof Error ? error.message : 'Unknown error reimporting Spotlight metadata'
+    }
+  }
+}
+
+function scheduleSpotlightFollowUp(filePath: string, delayMs: number): void {
+  const timeout = setTimeout(() => {
+    void (async () => {
+      try {
+        const spotlight = await reimportSpotlightMetadata(filePath)
+        await appendMetadataWriteLog({
+          schemaVersion: 1,
+          event: 'metadata.spotlightFollowUp',
+          timestamp: new Date().toISOString(),
+          appVersion: app.getVersion(),
+          filePath,
+          filename: path.basename(filePath),
+          delayMs,
+          spotlight
+        })
+      } catch (error) {
+        console.warn('Failed to append Spotlight follow-up log:', error)
+      }
+    })()
+  }, delayMs)
+
+  timeout.unref?.()
+}
+
+async function verifyFolderMetadata(folderPath: string): Promise<FolderMetadataVerificationResult> {
+  const entries = await fs.promises.readdir(folderPath, { withFileTypes: true })
+  const files = entries
+    .filter((entry) => entry.isFile() && IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
+    .map((entry) => path.join(folderPath, entry.name))
+    .sort((a, b) => path.basename(a).localeCompare(path.basename(b)))
+
+  const results: FolderMetadataVerificationFile[] = []
+
+  for (const filePath of files) {
+    const embedded = await getExifSnapshot(filePath)
+    const finder = await getFinderMetadataSnapshot(filePath)
+    const embeddedPresent = hasEmbeddedMetadata(embedded)
+    const finderVisible = hasFinderMetadata(finder)
+
+    results.push({
+      filePath,
+      filename: path.basename(filePath),
+      embedded,
+      finder,
+      embeddedPresent,
+      finderVisible
+    })
+  }
+
+  const embeddedPresent = results.filter((file) => file.embeddedPresent).length
+  const finderVisible = results.filter((file) => file.finderVisible).length
+
+  return {
+    folderPath,
+    total: results.length,
+    embeddedPresent,
+    embeddedMissing: results.length - embeddedPresent,
+    finderVisible,
+    finderMissing: results.length - finderVisible,
+    logPath: getMetadataWriteLogPath(),
+    files: results
   }
 }
 
@@ -416,6 +650,7 @@ ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData, keepBac
   let result: { success: boolean; backupPath?: string; error?: string }
   let after: ExifSnapshot | undefined
   let fileAfter: FileSnapshot | undefined
+  let spotlight: SpotlightReimportResult | undefined
 
   try {
     result = await writeExifData(exiftool, filePath, data, keepBackup)
@@ -425,6 +660,10 @@ ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData, keepBac
 
   after = await getExifSnapshot(filePath)
   fileAfter = await getFileSnapshot(filePath)
+  if (result.success) {
+    spotlight = await reimportSpotlightMetadata(filePath)
+    scheduleSpotlightFollowUp(filePath, 30000)
+  }
 
   try {
     await appendMetadataWriteLog({
@@ -440,6 +679,7 @@ ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData, keepBac
       after,
       fileBefore,
       fileAfter,
+      spotlight,
       durationMs: Date.now() - startedAt,
       result
     })
@@ -448,6 +688,43 @@ ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData, keepBac
   }
 
   return result
+})
+
+ipcMain.handle('verify-folder-metadata', async (): Promise<FolderMetadataVerificationResult | { error: string }> => {
+  if (!mainWindow) return { error: 'No app window available' }
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+    title: 'Verify folder metadata'
+  })
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return { error: 'Verification canceled' }
+  }
+
+  const startedAt = Date.now()
+  const folderPath = result.filePaths[0]
+
+  try {
+    const verification = await verifyFolderMetadata(folderPath)
+
+    try {
+      await appendMetadataWriteLog({
+        schemaVersion: 1,
+        event: 'metadata.verifyFolder',
+        timestamp: new Date().toISOString(),
+        appVersion: app.getVersion(),
+        durationMs: Date.now() - startedAt,
+        ...verification
+      })
+    } catch (error) {
+      console.warn('Failed to append metadata verification log:', error)
+    }
+
+    return verification
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Unknown error verifying folder metadata' }
+  }
 })
 
 // Restore from backup

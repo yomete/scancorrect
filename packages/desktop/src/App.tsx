@@ -18,6 +18,7 @@ import {
   ProcessingLogEntry,
   LocationValue,
   GeocodingResult,
+  FolderMetadataVerificationResult,
 } from "./types";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
@@ -63,6 +64,33 @@ function App() {
   // Bulk location modal
   const [isBulkLocationOpen, setIsBulkLocationOpen] = useState(false);
 
+  const handleVerifyFolderMetadata = useCallback(async () => {
+    try {
+      const result = await window.electronAPI.verifyFolderMetadata();
+
+      if ("error" in result) {
+        if (result.error !== "Verification canceled") {
+          alert(`Metadata verification failed: ${result.error}`);
+        }
+        return;
+      }
+
+      const verification: FolderMetadataVerificationResult = result;
+      alert(
+        [
+          `Verified ${verification.total} images`,
+          `Embedded metadata: ${verification.embeddedPresent}/${verification.total}`,
+          `Finder-visible metadata: ${verification.finderVisible}/${verification.total}`,
+          `Missing embedded metadata: ${verification.embeddedMissing}`,
+          `Missing Finder metadata: ${verification.finderMissing}`,
+          `Log: ${verification.logPath}`,
+        ].join("\n")
+      );
+    } catch (error) {
+      alert(`Metadata verification failed: ${error}`);
+    }
+  }, []);
+
   // Keyboard shortcuts
   useKeyboardShortcuts({
     "mod+a": () => {
@@ -72,6 +100,9 @@ function App() {
     },
     "mod+shift+a": () => {
       setSelectedImageIds(new Set());
+    },
+    "mod+alt+shift+v": () => {
+      void handleVerifyFolderMetadata();
     },
     "Escape": () => {
       if (isBulkLocationOpen) {
@@ -512,20 +543,7 @@ function App() {
     }
   };
 
-  const handleClearImages = async () => {
-    // Cleanup backup files for successfully saved images
-    const backupPaths = processingLog
-      .filter((entry) => entry.success && entry.backupPath)
-      .map((entry) => entry.backupPath as string);
-
-    if (backupPaths.length > 0) {
-      try {
-        await window.electronAPI.cleanupBackups(backupPaths);
-      } catch (error) {
-        console.error("Failed to cleanup backups:", error);
-      }
-    }
-
+  const handleClearImages = () => {
     setImages([]);
     setSelectedImageIds(new Set());
     setCurrentView("dropzone");
