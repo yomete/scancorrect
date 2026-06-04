@@ -3,6 +3,27 @@
 @theme {
   --font-serif: var(--font-fraunces), Georgia, serif;
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+/* Technical-concept marketing site — dark cool-slate canvas, blue accent.
+   Consumed via inline styles by the homepage in components/technical/. */
+:root {
+  --serif: var(--font-fraunces), Georgia, serif;
+  --sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --mono: var(--font-jetbrains-mono), ui-monospace, 'SF Mono', Menlo, monospace;
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-2: #1c222b;
+  --border: #262d36;
+  --grid: #1a212b;
+  --text: #e6edf3;
+  --muted: #9aa5b1;
+  --faint: #6b7480;
+  --blue: #3b82f6;
+  --red: #f85149;
+  --green: #3fb950;
+  --app-surface: #f3f4f6;
 }
 
 @layer base {
@@ -11,9 +32,37 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Dark canvas powers the homepage; the guides pages cover it with their own
+     bg-white wrapper, so their text color (inherited #1a1a1a) is unchanged. */
   body {
-    background-color: #F9F5F0;
+    background-color: var(--bg);
     color: #1a1a1a;
-    font-family: var(--font-sans);
+    font-family: var(--sans);
+  }
+}
+
+/* Homepage scope: light text + brightening link hover. */
+.technical-site {
+  color: var(--text);
+}
+.technical-site a:hover {
+  color: var(--text) !important;
+}
+
+@keyframes scPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+/* Collapse the multi-column grids on narrow viewports (matches the prototype). */
+@media (max-width: 880px) {
+  .hero-grid,
+  .spec-grid,
+  .steps-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .spec-cell,
+  .step-cell {
+    border-left: none !important;
   }
 }
