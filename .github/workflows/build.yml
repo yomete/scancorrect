@@ -15,6 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
 
@@ -45,9 +46,16 @@ jobs:
 
       # Launch the PACKAGED app and assert it can write EXIF — the only check
       # that proves the asar-unpacked, per-OS ExifTool binary spawns at runtime.
-      - name: Install xvfb (Linux)
+      # The packaged Electron app needs Chromium's system libraries (libnss3,
+      # libgbm1, libgtk-3-0, …) which aren't on the bare runner. playwright
+      # install-deps apt-installs them; xvfb provides a display.
+      - name: Install Linux runtime deps for the packaged app
         if: runner.os == 'Linux'
-        run: sudo apt-get install -y xvfb
+        working-directory: packages/desktop
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          npx playwright install-deps
 
       - name: Smoke-test packaged app (Linux)
         if: runner.os == 'Linux'
