@@ -32,16 +32,17 @@ function packagedBinary(): string {
       appDir.replace(/\.app$/, "")
     );
   }
-  // linux: executableName defaults to productName ("ScanCorrect"); fall back to
-  // scanning for the lone extension-less executable in linux-unpacked.
+  // linux: electron-builder names the binary after the lowercased package
+  // "name" (here "desktop"), NOT productName. Pick the lone app executable,
+  // skipping Electron's helper binaries.
   const dir = path.join(RELEASE_DIR, "linux-unpacked");
-  const entries = fs.readdirSync(dir);
-  const exe =
-    entries.find((e) => e.toLowerCase() === "scancorrect") ||
-    entries.find(
-      (e) => !e.includes(".") && fs.statSync(path.join(dir, e)).isFile()
-    );
-  if (!exe) throw new Error(`No executable in ${dir}: ${entries.join(", ")}`);
+  const SKIP = new Set(["chrome-sandbox", "chrome_crashpad_handler"]);
+  const exe = fs.readdirSync(dir).find((e) => {
+    if (e.includes(".") || SKIP.has(e)) return false;
+    const st = fs.statSync(path.join(dir, e));
+    return st.isFile() && (st.mode & 0o111) !== 0; // extension-less + executable
+  });
+  if (!exe) throw new Error(`No app executable in ${fs.readdirSync(dir).join(", ")}`);
   return path.join(dir, exe);
 }
 
