@@ -96,3 +96,8 @@ temp/
 *.njsproj
 *.sln
 *.sw?
+.vercel
+
+# Playwright / test output
+test-results/
+playwright-report/

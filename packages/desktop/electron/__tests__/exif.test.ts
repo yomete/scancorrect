@@ -260,7 +260,7 @@ describe('exif', () => {
         '/test.jpg',
         expect.objectContaining({
           GPSLatitude: 37.7749,
-          GPSLongitude: 122.4194,
+          GPSLongitude: -122.4194,
           GPSLatitudeRef: 'N',
           GPSLongitudeRef: 'W'
         }),
@@ -284,7 +284,7 @@ describe('exif', () => {
       expect(mockExifTool.write).toHaveBeenCalledWith(
         '/test.jpg',
         expect.objectContaining({
-          GPSLatitude: 33.8688,
+          GPSLatitude: -33.8688,
           GPSLongitude: 151.2093,
           GPSLatitudeRef: 'S',
           GPSLongitudeRef: 'E'

@@ -21,6 +21,7 @@ import {
   FolderMetadataVerificationResult,
 } from "./types";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { getFilename } from "./utils";
 
 type AppView = "dropzone" | "grid";
 
@@ -94,13 +95,19 @@ function App() {
       }
 
       const verification: FolderMetadataVerificationResult = result;
+      // Finder-visible metadata is a macOS-only concept; on Windows/Linux the
+      // counts are always 0/N, so omit those lines instead of showing a false
+      // negative.
+      const isMac = window.electronAPI.platform === "darwin";
       alert(
         [
           `Verified ${verification.total} images`,
           `Embedded metadata: ${verification.embeddedPresent}/${verification.total}`,
-          `Finder-visible metadata: ${verification.finderVisible}/${verification.total}`,
+          ...(isMac
+            ? [`Finder-visible metadata: ${verification.finderVisible}/${verification.total}`]
+            : []),
           `Missing embedded metadata: ${verification.embeddedMissing}`,
-          `Missing Finder metadata: ${verification.finderMissing}`,
+          ...(isMac ? [`Missing Finder metadata: ${verification.finderMissing}`] : []),
           `Log: ${verification.logPath}`,
         ].join("\n")
       );
@@ -269,7 +276,7 @@ function App() {
     // Create ImageFile objects for each dropped file
     const newImages: ImageFile[] = pathsToAdd.map((path) => ({
       path,
-      filename: path.split("/").pop() || path.split("\\").pop() || path,
+      filename: getFilename(path),
       selected: false,
       status: "pending" as const,
     }));
@@ -324,7 +331,7 @@ function App() {
     const files = Array.from(e.dataTransfer.files);
     const imagePaths = files
       .filter((file) => /\.(jpg|jpeg|tiff|tif)$/i.test(file.name))
-      .map((file) => file.path);
+      .map((file) => window.electronAPI.getPathForFile(file));
 
     if (imagePaths.length > 0) {
       await handleFilesDropped(imagePaths);

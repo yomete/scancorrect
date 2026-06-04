@@ -100,6 +100,33 @@ jobs:
           path: packages/desktop/test-results/
           retention-days: 7
 
+  integration-tests:
+    name: Real-ExifTool Integration Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Spawns the real per-OS ExifTool binary (no mocks). ubuntu/macos/windows
+      # runners all ship Perl, which exiftool-vendored needs on non-Windows.
+      - name: Run integration tests (real ExifTool binary)
+        working-directory: packages/desktop
+        run: npm run test:integration
+
   typecheck:
     name: TypeScript Check
     runs-on: ubuntu-latest

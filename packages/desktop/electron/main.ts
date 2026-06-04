@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, Menu } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs'
 import * as os from 'os'
@@ -490,11 +490,24 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 function createWindow(): void {
+  // Drop the default application menu on Windows/Linux so the packaged build
+  // doesn't expose View > Reload / Toggle Developer Tools to end users. macOS
+  // keeps its standard app menu (needed for the Cmd+C/V edit roles).
+  if (process.platform !== 'darwin') {
+    Menu.setApplicationMenu(null)
+  }
+
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     minWidth: 600,
     minHeight: 400,
+    // On Linux the window/taskbar icon must be set explicitly (win/mac take it
+    // from the packaged executable). build/icon.png is bundled via the "files"
+    // glob in package.json.
+    ...(process.platform === 'linux'
+      ? { icon: path.join(__dirname, '../build/icon.png') }
+      : {}),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

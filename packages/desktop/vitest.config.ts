@@ -16,7 +16,10 @@ export default defineConfig({
       'node_modules',
       'dist',
       'dist-electron',
-      'e2e'
+      'e2e',
+      // Integration tests use the real ExifTool binary and run via
+      // vitest.integration.config.ts (and the integration-tests CI job).
+      '**/*.integration.test.ts'
     ],
     coverage: {
       provider: 'v8',

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 interface CameraProfile {
   id: string
@@ -126,6 +126,10 @@ export interface ElectronAPI {
   deleteProfile: (profileId: string) => Promise<void>
   showOpenDialog: () => Promise<string[] | undefined>
 
+  // Platform info + dropped-file path resolution
+  platform: string
+  getPathForFile: (file: File) => string
+
   // Geocoding
   geocodeLocation: (query: string) => Promise<GeocodingResult[]>
 
@@ -199,6 +203,11 @@ const electronAPI: ElectronAPI = {
   saveProfile: (profile: CameraProfile) => ipcRenderer.invoke('save-profile', profile),
   deleteProfile: (profileId: string) => ipcRenderer.invoke('delete-profile', profileId),
   showOpenDialog: () => ipcRenderer.invoke('show-open-dialog'),
+
+  // Platform info + dropped-file path resolution (webUtils replaces the
+  // deprecated File.path, which was removed in Electron 32)
+  platform: process.platform,
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
 
   // Geocoding
   geocodeLocation: (query: string) => ipcRenderer.invoke('geocode-location', query),

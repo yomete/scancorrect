@@ -2,6 +2,8 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './e2e',
+  // Smoke tests target the packaged build and run via playwright.smoke.config.ts.
+  testIgnore: '**/smoke/**',
   timeout: 30000,
   retries: process.env.CI ? 2 : 0,
   workers: 1, // Electron tests should run sequentially

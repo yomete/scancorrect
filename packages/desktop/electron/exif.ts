@@ -224,9 +224,11 @@ export async function writeExifData(
     if (data.location !== undefined) {
       const { latitude, longitude } = data.location
 
-      // Store absolute values with reference tags
-      tags.GPSLatitude = Math.abs(latitude)
-      tags.GPSLongitude = Math.abs(longitude)
+      // Write signed values; ExifTool derives the hemisphere from the sign.
+      // Passing an absolute value lets the positive sign override an explicit
+      // W/S ref, silently mis-tagging Western/Southern coordinates as East/North.
+      tags.GPSLatitude = latitude
+      tags.GPSLongitude = longitude
       tags.GPSLatitudeRef = latitude >= 0 ? 'N' : 'S'
       tags.GPSLongitudeRef = longitude >= 0 ? 'E' : 'W'
     }
