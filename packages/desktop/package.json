@@ -1,9 +1,12 @@
 {
   "name": "desktop",
   "private": true,
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "ScanCorrect - Desktop Electron application",
-  "author": "ScanCorrect",
+  "author": {
+    "name": "Yomi Eluwande",
+    "email": "yomi.eluwande@gmail.com"
+  },
   "main": "dist-electron/main.js",
   "homepage": "./",
   "scripts": {

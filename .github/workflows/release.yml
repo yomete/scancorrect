@@ -37,19 +37,15 @@ jobs:
 
       - name: Build desktop app
         working-directory: packages/desktop
+        # Build unsigned: no signing certs are configured, and passing the empty
+        # CSC_LINK / WIN_CSC_LINK secrets makes electron-builder try to load an
+        # empty cert path and fail ("not a file"). To enable signing later, add
+        # the *_CERT_* secrets back as CSC_LINK / WIN_CSC_LINK env vars here.
         run: |
           npm run build
           npx electron-builder
         env:
-          # Required for macOS code signing (optional, but recommended)
-          CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
-          # Required for macOS notarization (optional)
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-          # For Windows code signing (optional)
-          WIN_CSC_LINK: ${{ secrets.WIN_CERT_P12_BASE64 }}
-          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+          CSC_IDENTITY_AUTODISCOVERY: "false"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
