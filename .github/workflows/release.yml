@@ -11,6 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
 
@@ -35,9 +36,10 @@ jobs:
         shell: bash
 
       - name: Build desktop app
+        working-directory: packages/desktop
         run: |
-          npm run build -w desktop
-          npm run dist -w desktop
+          npm run build
+          npx electron-builder
         env:
           # Required for macOS code signing (optional, but recommended)
           CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
