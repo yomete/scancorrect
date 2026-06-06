@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
 
+# The release job needs write access to create the GitHub Release + upload assets.
+# (Default GITHUB_TOKEN is read-only, which 403s on release creation.)
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build ${{ matrix.os }}
