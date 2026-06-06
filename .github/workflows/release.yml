@@ -56,7 +56,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-builds
-          path: release/*
+          # Only the installers (top-level), not the unpacked app dirs — otherwise
+          # the release sweeps in raw exes (ScanCorrect.exe, perl.exe, elevate.exe…).
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+            release/*.blockmap
+            release/latest*.yml
           retention-days: 5
 
   release:
