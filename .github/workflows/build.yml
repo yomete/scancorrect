@@ -66,10 +66,6 @@ jobs:
         if: runner.os != 'Linux'
         working-directory: packages/desktop
         run: npm run test:smoke
-
-      - name: Upload build artifacts (for testing)
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.os }}-build
-          path: release/*
-          retention-days: 7
+      # No artifact upload: the smoke test validates the build in-job, and CI
+      # artifacts of the full unpacked app were exhausting the storage quota.
+      # Release installers are published by release.yml on a version tag.
