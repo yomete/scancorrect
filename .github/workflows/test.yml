@@ -95,6 +95,19 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      # Artifact storage is account-quota-limited; also emit the Linux
+      # screenshots as base64 in the log so they can be retrieved regardless.
+      - name: Echo screenshots (base64, Linux)
+        if: always() && runner.os == 'Linux'
+        working-directory: packages/desktop
+        run: |
+          for f in screenshots/*.png; do
+            [ -f "$f" ] || continue
+            echo "SCSHOT_BEGIN:$(basename "$f")"
+            base64 -w0 "$f"; echo ""
+            echo "SCSHOT_END"
+          done
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
