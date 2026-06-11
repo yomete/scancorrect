@@ -15,19 +15,8 @@ vi.mock('electron', () => ({
 import { nativeImage } from 'electron'
 import {
   getThumbnail,
-  evictCacheIfNeeded,
-  removeLegacyCacheFiles,
   THUMBNAIL_CACHE_DIR,
 } from '../thumbnails'
-
-function makeExiftoolSpy(buf: Buffer | null = null) {
-  return {
-    extractBinaryTagToBuffer: vi.fn().mockRejectedValue(new Error('no tag')),
-    ...buf
-      ? { extractBinaryTagToBuffer: vi.fn().mockResolvedValue(buf) }
-      : {},
-  }
-}
 
 function fileHash(filePath: string): string {
   return crypto.createHash('sha256').update(filePath).digest('hex')
