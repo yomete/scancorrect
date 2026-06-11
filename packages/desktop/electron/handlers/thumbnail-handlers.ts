@@ -1,6 +1,6 @@
 import type { IpcMain } from 'electron'
 import type { ExifTool } from 'exiftool-vendored'
-import type Store from 'electron-store'
+import type Store from 'electron-store' with { 'resolution-mode': 'import' }
 import type { StoreSchema } from '../store'
 import { getThumbnail } from '../thumbnails'
 import { assertAbsolutePath } from './guard'

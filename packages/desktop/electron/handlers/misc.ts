@@ -1,5 +1,5 @@
 import type { IpcMain, Dialog, BrowserWindow } from 'electron'
-import type Store from 'electron-store'
+import type Store from 'electron-store' with { 'resolution-mode': 'import' }
 import type { StoreSchema } from '../store'
 import { autoUpdater } from 'electron-updater'
 

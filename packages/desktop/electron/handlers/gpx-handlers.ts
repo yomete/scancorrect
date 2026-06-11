@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import type { IpcMain, Dialog, BrowserWindow } from 'electron'
-import type Store from 'electron-store'
+import type Store from 'electron-store' with { 'resolution-mode': 'import' }
 import { parseGPX, matchPhotosToGPX } from '../gpx'
 import type { GPXTrack, GPXMatchResult } from '../ipc-types'
 import type { StoreSchema } from '../store'

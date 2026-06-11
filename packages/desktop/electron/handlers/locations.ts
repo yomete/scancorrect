@@ -1,5 +1,5 @@
 import type { IpcMain } from 'electron'
-import type Store from 'electron-store'
+import type Store from 'electron-store' with { 'resolution-mode': 'import' }
 import type { GeocodingResponse } from '../geocoding'
 import { geocodeLocation } from '../geocoding'
 import type { SavedLocation, LocationHistoryEntry } from '../ipc-types'
