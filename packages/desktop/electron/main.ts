@@ -11,6 +11,7 @@ import { registerExifHandlers } from './handlers/exif-handlers'
 import { registerLocationHandlers } from './handlers/locations'
 import { registerGpxHandlers } from './handlers/gpx-handlers'
 import { registerThumbnailHandlers } from './handlers/thumbnail-handlers'
+import { removeLegacyCacheFiles, evictCacheIfNeeded } from './thumbnails'
 import { registerMiscHandlers } from './handlers/misc'
 
 // Initialize ExifTool with proper configuration
@@ -252,6 +253,8 @@ function registerAllHandlers(): void {
 
 app.whenReady().then(() => {
   initBackupDir(path.join(app.getPath('userData'), 'backups'))
+  removeLegacyCacheFiles()
+  evictCacheIfNeeded()
   registerAllHandlers()
   createWindow()
 

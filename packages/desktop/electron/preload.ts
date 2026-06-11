@@ -49,8 +49,6 @@ export interface ElectronAPI {
   extractThumbnail: (filePath: string) => Promise<string | null>
   getCacheSetting: () => Promise<boolean>
   setCacheSetting: (enabled: boolean) => Promise<void>
-  getCachedThumbnail: (filePath: string) => Promise<string | null>
-  cacheThumbnail: (filePath: string, dataUrl: string) => Promise<boolean>
 
   // Window management
   forceCloseWindow: () => Promise<void>
@@ -129,8 +127,6 @@ const electronAPI: ElectronAPI = {
   extractThumbnail: (filePath: string) => ipcRenderer.invoke('extract-thumbnail', filePath),
   getCacheSetting: () => ipcRenderer.invoke('get-cache-setting'),
   setCacheSetting: (enabled: boolean) => ipcRenderer.invoke('set-cache-setting', enabled),
-  getCachedThumbnail: (filePath: string) => ipcRenderer.invoke('get-cached-thumbnail', filePath),
-  cacheThumbnail: (filePath: string, dataUrl: string) => ipcRenderer.invoke('cache-thumbnail', filePath, dataUrl),
 
   // Window management
   forceCloseWindow: () => ipcRenderer.invoke('force-close-window'),

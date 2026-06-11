@@ -1,15 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { registerThumbnailHandlers } from '../handlers/thumbnail-handlers'
 
-// Mock fs so we don't touch disk
-vi.mock('fs', () => ({
-  existsSync: vi.fn(),
-  mkdirSync: vi.fn(),
-  readFileSync: vi.fn(),
-  writeFileSync: vi.fn(),
+// Mock the thumbnails module so we don't touch disk or electron APIs
+vi.mock('../thumbnails', () => ({
+  getThumbnail: vi.fn(),
 }))
 
-import * as fs from 'fs'
+import { getThumbnail } from '../thumbnails'
 
 function makeFakeIpc() {
   const handlers = new Map<string, (...args: unknown[]) => unknown>()
@@ -61,34 +58,33 @@ describe('registerThumbnailHandlers', () => {
     })
   })
 
-  describe('cache read/write', () => {
-    it('get-cached-thumbnail returns null when no cache hit', async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(false)
-      const result = await ipc.invoke('get-cached-thumbnail', '/absolute/test.jpg')
-      expect(result).toBeNull()
-    })
-
-    it('get-cached-thumbnail returns cached data', async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(true)
-      vi.mocked(fs.readFileSync).mockReturnValue('data:image/jpeg;base64,abc')
-      const result = await ipc.invoke('get-cached-thumbnail', '/absolute/test.jpg')
+  describe('extract-thumbnail delegates to getThumbnail', () => {
+    it('returns data URL on success', async () => {
+      vi.mocked(getThumbnail).mockResolvedValue('data:image/jpeg;base64,abc')
+      const result = await ipc.invoke('extract-thumbnail', '/absolute/test.jpg')
       expect(result).toBe('data:image/jpeg;base64,abc')
+      expect(getThumbnail).toHaveBeenCalledWith('/absolute/test.jpg', {}, { cacheEnabled: true })
     })
 
-    it('cache-thumbnail writes to disk', async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(true)
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {})
-      const result = await ipc.invoke('cache-thumbnail', '/absolute/test.jpg', 'data:image/jpeg;base64,abc')
-      expect(result).toBe(true)
-      expect(fs.writeFileSync).toHaveBeenCalled()
+    it('passes cacheEnabled=false when store is false', async () => {
+      store.set('thumbnailCacheEnabled', false)
+      vi.mocked(getThumbnail).mockResolvedValue(null)
+      await ipc.invoke('extract-thumbnail', '/absolute/test.jpg')
+      expect(getThumbnail).toHaveBeenCalledWith('/absolute/test.jpg', {}, { cacheEnabled: false })
     })
 
-    it('get-cached-thumbnail rejects relative paths', async () => {
-      await expect(ipc.invoke('get-cached-thumbnail', 'relative/test.jpg')).rejects.toThrow('Invalid file path')
+    it('rejects relative paths', async () => {
+      await expect(ipc.invoke('extract-thumbnail', 'relative/test.jpg')).rejects.toThrow('Invalid file path')
+    })
+  })
+
+  describe('removed channels', () => {
+    it('get-cached-thumbnail is not registered', () => {
+      expect(() => ipc.invoke('get-cached-thumbnail', '/absolute/test.jpg')).toThrow('No handler for get-cached-thumbnail')
     })
 
-    it('cache-thumbnail rejects relative paths', async () => {
-      await expect(ipc.invoke('cache-thumbnail', 'relative/test.jpg', 'data:x')).rejects.toThrow('Invalid file path')
+    it('cache-thumbnail is not registered', () => {
+      expect(() => ipc.invoke('cache-thumbnail', '/absolute/test.jpg', 'data:x')).toThrow('No handler for cache-thumbnail')
     })
   })
 })

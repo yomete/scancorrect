@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useSettingsStore } from '../store'
 
 interface ThumbnailState {
   thumbnail: string | null
@@ -7,7 +6,7 @@ interface ThumbnailState {
   error: boolean
 }
 
-const MAX_THUMBNAIL_EXTRACTIONS = 4
+const MAX_THUMBNAIL_EXTRACTIONS = 8
 let activeThumbnailExtractions = 0
 const thumbnailQueue: Array<() => void> = []
 
@@ -38,25 +37,16 @@ export function useThumbnailExtraction(filePath: string): ThumbnailState {
     loading: true,
     error: false
   })
-  const { thumbnailCacheEnabled } = useSettingsStore()
 
   useEffect(() => {
     let cancelled = false
 
-    async function extractThumbnail() {
+    async function loadThumbnail() {
       setState({ thumbnail: null, loading: true, error: false })
 
       try {
-        // Check cache first if enabled
-        if (thumbnailCacheEnabled) {
-          const cached = await window.electronAPI.getCachedThumbnail(filePath)
-          if (cached && !cancelled) {
-            setState({ thumbnail: cached, loading: false, error: false })
-            return
-          }
-        }
-
-        // Extract thumbnail
+        // Cache orchestration moved to main process — one IPC call handles
+        // cache check, extraction on miss, and cache write.
         const thumbnail = await enqueueThumbnailExtraction(() =>
           window.electronAPI.extractThumbnail(filePath)
         )
@@ -64,10 +54,6 @@ export function useThumbnailExtraction(filePath: string): ThumbnailState {
         if (cancelled) return
 
         if (thumbnail) {
-          // Cache it if enabled
-          if (thumbnailCacheEnabled) {
-            await window.electronAPI.cacheThumbnail(filePath, thumbnail)
-          }
           setState({ thumbnail, loading: false, error: false })
         } else {
           setState({ thumbnail: null, loading: false, error: false })
@@ -80,12 +66,12 @@ export function useThumbnailExtraction(filePath: string): ThumbnailState {
       }
     }
 
-    extractThumbnail()
+    loadThumbnail()
 
     return () => {
       cancelled = true
     }
-  }, [filePath, thumbnailCacheEnabled])
+  }, [filePath])
 
   return state
 }

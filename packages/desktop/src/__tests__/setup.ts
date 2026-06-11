@@ -24,8 +24,6 @@ vi.stubGlobal('electronAPI', {
   extractThumbnail: vi.fn().mockResolvedValue(null),
   getCacheSetting: vi.fn().mockResolvedValue(true),
   setCacheSetting: vi.fn().mockResolvedValue(undefined),
-  getCachedThumbnail: vi.fn().mockResolvedValue(null),
-  cacheThumbnail: vi.fn().mockResolvedValue(undefined),
   getSavedLocations: vi.fn().mockResolvedValue([]),
   saveLocation: vi.fn().mockResolvedValue(undefined),
   deleteSavedLocation: vi.fn().mockResolvedValue(undefined),
