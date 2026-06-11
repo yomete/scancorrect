@@ -303,32 +303,28 @@ function App() {
 
     setCurrentView("grid");
 
-    // Read EXIF data for each image and apply profile defaults
+    // Read EXIF data for all new images in a single batch IPC call
     const profile = profiles.find((p) => p.id === selectedProfile);
 
-    const updatedImages = await Promise.all(
-      newImages.map(async (image) => {
-        try {
-          const result = await window.electronAPI.readExif(image.path);
-          if ("error" in result) {
-            return { ...image, error: result.error };
-          }
+    const batchResult = await window.electronAPI.readExifBatch(newImages.map((i) => i.path));
 
-          // Start with profile defaults as pending changes
-          const pendingChanges = profile
-            ? applyProfileToPendingChanges(undefined, profile)
-            : {};
+    const updatedImages = newImages.map((image) => {
+      const result = batchResult[image.path];
+      if (!result || "error" in result) {
+        return { ...image, error: result?.error ?? "Unknown error reading EXIF data" };
+      }
 
-          return {
-            ...image,
-            existingExif: result.data,
-            pendingChanges,
-          };
-        } catch (error) {
-          return { ...image, error: String(error) };
-        }
-      })
-    );
+      // Start with profile defaults as pending changes
+      const pendingChanges = profile
+        ? applyProfileToPendingChanges(undefined, profile)
+        : {};
+
+      return {
+        ...image,
+        existingExif: result.data,
+        pendingChanges,
+      };
+    });
 
     setImages((prev) => {
       const loadedPaths = new Set(prev.map((image) => image.path));

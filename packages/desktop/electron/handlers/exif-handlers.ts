@@ -13,7 +13,7 @@ import {
   hasFinderMetadata,
   type ExifSnapshot,
 } from '../spotlight'
-import type { ExifData, FolderMetadataVerificationFile, FolderMetadataVerificationResult } from '../ipc-types'
+import type { ExifData, ExifBatchResult, FolderMetadataVerificationFile, FolderMetadataVerificationResult } from '../ipc-types'
 import type { StoreSchema } from '../store'
 import { assertAbsolutePath } from './guard'
 
@@ -54,6 +54,22 @@ export function registerExifHandlers(deps: ExifHandlerDeps): void {
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Unknown error reading EXIF data' }
     }
+  })
+
+  ipcMain.handle('read-exif-batch', async (_, filePaths: string[]): Promise<ExifBatchResult> => {
+    const entries = await Promise.all(
+      filePaths.map(async (filePath) => {
+        assertAbsolutePath(filePath)
+        try {
+          const data = await readExifData(exiftool, filePath)
+          const isScanner = isLikelyScannerMetadata(data.make, data.model)
+          return [filePath, { data, isScanner }] as const
+        } catch (error) {
+          return [filePath, { error: error instanceof Error ? error.message : 'Unknown error reading EXIF data' }] as const
+        }
+      })
+    )
+    return Object.fromEntries(entries)
   })
 
   ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData): Promise<{ success: boolean; backupPath?: string; error?: string; warning?: string }> => {

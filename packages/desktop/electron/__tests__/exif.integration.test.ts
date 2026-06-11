@@ -4,6 +4,7 @@ import * as fs from "fs/promises";
 import * as os from "os";
 import * as path from "path";
 import { readExifData, writeExifData, initBackupDir } from "../exif";
+import { isLikelyScannerMetadata } from "../scanner-detection";
 
 // Integration test that spawns the REAL vendored ExifTool binary and round-trips
 // metadata through an actual file. The unit tests mock exiftool-vendored, so a
@@ -57,6 +58,34 @@ describe("exif integration (real ExifTool binary)", () => {
     expect(data.iso).toBe(400);
     expect(data.location?.latitude).toBeCloseTo(51.5074, 3);
     expect(data.location?.longitude).toBeCloseTo(-0.1278, 3);
+  });
+
+  it("read-exif-batch: returns data for valid files and error for missing file", async () => {
+    const file1 = await copyFixture("batch1.jpg");
+    const file2 = await copyFixture("batch2.jpg");
+    const missing = path.join(workDir, "nonexistent.jpg");
+
+    const filePaths = [file1, file2, missing];
+    const results = Object.fromEntries(
+      await Promise.all(
+        filePaths.map(async (filePath) => {
+          try {
+            const data = await readExifData(exiftool, filePath);
+            const isScanner = isLikelyScannerMetadata(data.make, data.model);
+            return [filePath, { data, isScanner }] as const;
+          } catch (error) {
+            return [filePath, { error: error instanceof Error ? error.message : "Unknown error" }] as const;
+          }
+        })
+      )
+    );
+
+    // Two valid files should have data
+    expect("data" in results[file1]).toBe(true);
+    expect("data" in results[file2]).toBe(true);
+    // Missing file should have an error, not throw the whole batch
+    expect("error" in results[missing]).toBe(true);
+    expect(typeof (results[missing] as { error: string }).error).toBe("string");
   });
 
   it("creates a verifiable backup when keepBackup is enabled", async () => {

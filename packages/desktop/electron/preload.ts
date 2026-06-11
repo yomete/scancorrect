@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type {
   CameraProfile,
   ExifData,
+  ExifBatchResult,
   CustomValues,
   ProcessingLogEntry,
   FolderMetadataVerificationResult,
@@ -28,6 +29,7 @@ export interface ElectronAPI {
 
   // EXIF reading and writing
   readExif: (filePath: string) => Promise<{ data: ExifData; isScanner: boolean } | { error: string }>
+  readExifBatch: (filePaths: string[]) => Promise<ExifBatchResult>
   writeExif: (filePath: string, data: ExifData) => Promise<{ success: boolean; backupPath?: string; error?: string; warning?: string }>
   verifyFolderMetadata: () => Promise<FolderMetadataVerificationResult | { error: string }>
 
@@ -104,6 +106,7 @@ const electronAPI: ElectronAPI = {
 
   // EXIF reading and writing
   readExif: (filePath: string) => ipcRenderer.invoke('read-exif', filePath),
+  readExifBatch: (filePaths: string[]) => ipcRenderer.invoke('read-exif-batch', filePaths),
   writeExif: (filePath: string, data: ExifData) =>
     ipcRenderer.invoke('write-exif', filePath, data),
   verifyFolderMetadata: () => ipcRenderer.invoke('verify-folder-metadata'),

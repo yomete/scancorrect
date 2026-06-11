@@ -45,6 +45,9 @@ export interface ExifData {
   dateTimeOriginal?: string // Full ISO timestamp for GPX matching
 }
 
+// Batch EXIF read result: keyed by file path
+export type ExifBatchResult = Record<string, { data: ExifData; isScanner: boolean } | { error: string }>
+
 export interface CustomValues {
   isoValues: number[]
   apertureValues: number[]
