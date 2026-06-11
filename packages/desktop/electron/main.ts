@@ -13,6 +13,7 @@ import { registerGpxHandlers } from './handlers/gpx-handlers'
 import { registerThumbnailHandlers } from './handlers/thumbnail-handlers'
 import { removeLegacyCacheFiles, evictCacheIfNeeded } from './thumbnails'
 import { registerMiscHandlers } from './handlers/misc'
+import { initAutoUpdater } from './updater'
 
 // Initialize ExifTool with proper configuration
 const exiftool = new ExifTool({
@@ -257,6 +258,7 @@ app.whenReady().then(() => {
   evictCacheIfNeeded()
   registerAllHandlers()
   createWindow()
+  initAutoUpdater(() => mainWindow)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

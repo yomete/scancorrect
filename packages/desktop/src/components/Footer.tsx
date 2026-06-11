@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 
 import { CameraProfile } from "../types";
@@ -22,6 +23,15 @@ export function Footer({
   onProfileEdit,
 }: FooterProps) {
   const currentProfile = profiles.find((p) => p.id === selectedProfile);
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!window.electronAPI?.onUpdateReady) return
+    const unsubscribe = window.electronAPI.onUpdateReady((version) => {
+      setUpdateVersion(version)
+    })
+    return unsubscribe
+  }, [])
 
   return (
     <footer className="bg-white/95 dark:bg-neutral-700 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 px-3 py-2">
@@ -48,6 +58,17 @@ export function Footer({
             </span>
           )}
         </div>
+
+        {updateVersion && (
+          <button
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-blue-500 hover:bg-blue-600 text-white transition-colors flex-shrink-0"
+            onClick={() => window.electronAPI?.installUpdateNow?.()}
+            title={`v${updateVersion} ready — restart to update`}
+          >
+            <Icon icon="material-symbols:system-update" className="text-sm" />
+            v{updateVersion} ready — Restart to update
+          </button>
+        )}
 
         <ThemeSwitcher />
 

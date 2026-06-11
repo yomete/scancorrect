@@ -1,6 +1,7 @@
 import type { IpcMain, Dialog, BrowserWindow } from 'electron'
 import type Store from 'electron-store'
 import type { StoreSchema } from '../store'
+import { autoUpdater } from 'electron-updater'
 
 interface MiscHandlerDeps {
   ipcMain: IpcMain
@@ -60,5 +61,9 @@ export function registerMiscHandlers({
     } else {
       getStore().set('lastUsedProfile', profileId)
     }
+  })
+
+  ipcMain.handle('install-update-now', (): void => {
+    autoUpdater.quitAndInstall()
   })
 }
