@@ -22,30 +22,34 @@ export interface StoreSchema {
   lastUsedProfile?: string
 }
 
-// Lazy-load electron-store to avoid module-level electron initialization
 let storeInstance: Store<StoreSchema> | null = null
+
+// Call once during app startup (before createWindow) to load the ESM module
+export async function initStore(): Promise<void> {
+  if (storeInstance) return
+  const { default: StoreClass } = await import('electron-store')
+  storeInstance = new StoreClass<StoreSchema>({
+    defaults: {
+      profiles: [],
+      customValues: {
+        isoValues: [],
+        apertureValues: [],
+        shutterSpeeds: [],
+        focalLengths: []
+      },
+      processingLog: [],
+      thumbnailCacheEnabled: true,
+      savedLocations: [],
+      locationHistory: [],
+      gpxTracks: [],
+      mapboxAccessToken: undefined
+    }
+  })
+}
 
 export function getStore(): Store<StoreSchema> {
   if (!storeInstance) {
-    // Dynamic require to avoid module-level electron initialization
-    const StoreClass = require('electron-store').default
-    storeInstance = new StoreClass({
-      defaults: {
-        profiles: [],
-        customValues: {
-          isoValues: [],
-          apertureValues: [],
-          shutterSpeeds: [],
-          focalLengths: []
-        },
-        processingLog: [],
-        thumbnailCacheEnabled: true,
-        savedLocations: [],
-        locationHistory: [],
-        gpxTracks: [],
-        mapboxAccessToken: undefined
-      }
-    })
+    throw new Error('Store not initialized — call initStore() before getStore()')
   }
-  return storeInstance!
+  return storeInstance
 }
