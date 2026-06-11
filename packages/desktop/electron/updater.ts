@@ -5,8 +5,7 @@ import { app } from 'electron'
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000 // 4 hours
 
 function isDev(): boolean {
-  if (process.env.NODE_ENV === 'test') return false
-  return process.env.NODE_ENV === 'development' || !app.isPackaged
+  return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || !app.isPackaged
 }
 
 export function initAutoUpdater(getMainWindow: () => BrowserWindow | null): void {

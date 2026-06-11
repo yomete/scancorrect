@@ -1,19 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock electron-updater before importing updater
-const mockAutoUpdater = {
-  autoDownload: false,
-  autoInstallOnAppQuit: false,
-  checkForUpdates: vi.fn().mockResolvedValue(null),
-  quitAndInstall: vi.fn(),
-  on: vi.fn(),
-}
+// vi.mock is hoisted — define the mock object inside the factory, then
+// retrieve it via the module in each test.
+vi.mock('electron-updater', () => {
+  const mockAutoUpdater = {
+    autoDownload: false,
+    autoInstallOnAppQuit: false,
+    checkForUpdates: vi.fn().mockResolvedValue(null),
+    quitAndInstall: vi.fn(),
+    on: vi.fn(),
+  }
+  return { autoUpdater: mockAutoUpdater }
+})
 
-vi.mock('electron-updater', () => ({
-  autoUpdater: mockAutoUpdater,
-}))
-
-// Mock electron app
 vi.mock('electron', () => ({
   app: {
     isPackaged: false,
@@ -25,7 +24,20 @@ vi.mock('electron', () => ({
   },
 }))
 
+// Import after mocks are registered
 import { initAutoUpdater } from '../updater'
+import { autoUpdater } from 'electron-updater'
+import { app } from 'electron'
+
+const mockAutoUpdater = autoUpdater as unknown as {
+  autoDownload: boolean
+  autoInstallOnAppQuit: boolean
+  checkForUpdates: ReturnType<typeof vi.fn>
+  quitAndInstall: ReturnType<typeof vi.fn>
+  on: ReturnType<typeof vi.fn>
+}
+
+const mockApp = app as unknown as { isPackaged: boolean }
 
 describe('initAutoUpdater', () => {
   const getMainWindow = vi.fn()
@@ -34,6 +46,7 @@ describe('initAutoUpdater', () => {
     vi.clearAllMocks()
     mockAutoUpdater.autoDownload = false
     mockAutoUpdater.autoInstallOnAppQuit = false
+    mockApp.isPackaged = false
     delete process.env.PORTABLE_EXECUTABLE_DIR
     process.env.NODE_ENV = 'test'
   })
@@ -50,9 +63,7 @@ describe('initAutoUpdater', () => {
   })
 
   it('registers update-downloaded listener that sends update-ready to window', () => {
-    // Simulate packaged production build
-    const { app } = require('electron')
-    app.isPackaged = true
+    mockApp.isPackaged = true
     process.env.NODE_ENV = 'production'
 
     const fakeWindow = { webContents: { send: vi.fn() } }
@@ -60,26 +71,19 @@ describe('initAutoUpdater', () => {
 
     initAutoUpdater(getMainWindow)
 
-    // Find the update-downloaded listener registered via .on()
     const updateDownloadedCall = mockAutoUpdater.on.mock.calls.find(
-      ([event]) => event === 'update-downloaded'
+      ([event]: [string]) => event === 'update-downloaded'
     )
     expect(updateDownloadedCall).toBeDefined()
 
-    // Trigger it
-    const listener = updateDownloadedCall![1]
+    const listener = updateDownloadedCall![1] as (info: { version: string }) => void
     listener({ version: '0.4.0' })
 
     expect(fakeWindow.webContents.send).toHaveBeenCalledWith('update-ready', '0.4.0')
-
-    // Reset
-    app.isPackaged = false
-    process.env.NODE_ENV = 'test'
   })
 
-  it('does not send to window if mainWindow is null', () => {
-    const { app } = require('electron')
-    app.isPackaged = true
+  it('does not throw when mainWindow is null on update-downloaded', () => {
+    mockApp.isPackaged = true
     process.env.NODE_ENV = 'production'
 
     getMainWindow.mockReturnValue(null)
@@ -87,15 +91,11 @@ describe('initAutoUpdater', () => {
     initAutoUpdater(getMainWindow)
 
     const updateDownloadedCall = mockAutoUpdater.on.mock.calls.find(
-      ([event]) => event === 'update-downloaded'
+      ([event]: [string]) => event === 'update-downloaded'
     )
     expect(updateDownloadedCall).toBeDefined()
 
-    // Should not throw
-    const listener = updateDownloadedCall![1]
+    const listener = updateDownloadedCall![1] as (info: { version: string }) => void
     expect(() => listener({ version: '0.4.0' })).not.toThrow()
-
-    app.isPackaged = false
-    process.env.NODE_ENV = 'test'
   })
 })
