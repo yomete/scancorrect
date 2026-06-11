@@ -195,6 +195,10 @@ export interface ElectronAPI {
   getMapboxToken: () => Promise<string | undefined>
   setMapboxToken: (token: string | undefined) => Promise<void>
 
+  // Last-used profile
+  getLastUsedProfile: () => Promise<string | null>
+  setLastUsedProfile: (profileId: string | null) => Promise<void>
+
 }
 
 const electronAPI: ElectronAPI = {
@@ -273,6 +277,10 @@ const electronAPI: ElectronAPI = {
   // Mapbox Configuration
   getMapboxToken: () => ipcRenderer.invoke('get-mapbox-token'),
   setMapboxToken: (token: string | undefined) => ipcRenderer.invoke('set-mapbox-token', token),
+
+  // Last-used profile
+  getLastUsedProfile: () => ipcRenderer.invoke('get-last-used-profile'),
+  setLastUsedProfile: (profileId: string | null) => ipcRenderer.invoke('set-last-used-profile', profileId),
 
 }
 

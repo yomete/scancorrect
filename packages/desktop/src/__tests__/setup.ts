@@ -40,6 +40,8 @@ vi.stubGlobal('electronAPI', {
   matchPhotosToGpx: vi.fn().mockResolvedValue([]),
   getMapboxToken: vi.fn().mockResolvedValue(null),
   setMapboxToken: vi.fn().mockResolvedValue(undefined),
+  getLastUsedProfile: vi.fn().mockResolvedValue(null),
+  setLastUsedProfile: vi.fn().mockResolvedValue(undefined),
   geocodeLocation: vi.fn().mockResolvedValue([]),
   reverseGeocode: vi.fn().mockResolvedValue(null),
   onSaveBeforeClose: vi.fn(),

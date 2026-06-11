@@ -148,6 +148,15 @@ function App() {
     loadProcessingLog();
   }, []);
 
+  // Persist last-used profile whenever it changes to a non-empty value
+  useEffect(() => {
+    if (selectedProfile) {
+      window.electronAPI.setLastUsedProfile(selectedProfile).catch(() => {
+        // fire-and-forget; non-critical
+      });
+    }
+  }, [selectedProfile]);
+
   // Track if save was triggered by close dialog
   const saveAndCloseRef = useRef(false);
 
@@ -169,7 +178,12 @@ function App() {
       const loadedProfiles = await window.electronAPI.getProfiles();
       setProfiles(loadedProfiles);
       if (loadedProfiles.length > 0 && !selectedProfile) {
-        setSelectedProfile(loadedProfiles[0].id);
+        // Restore last-used profile if it still exists in the list
+        const lastUsed = await window.electronAPI.getLastUsedProfile();
+        const restoredId = lastUsed && loadedProfiles.some((p) => p.id === lastUsed)
+          ? lastUsed
+          : loadedProfiles[0].id;
+        setSelectedProfile(restoredId);
       }
     } catch (error) {
       console.error("Failed to load profiles:", error);

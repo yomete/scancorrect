@@ -1,4 +1,6 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeImage, screen } from 'electron'
+import { validateWindowBounds, MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT } from './window-state'
+import type { WindowBounds } from './window-state'
 import * as path from 'path'
 import * as fs from 'fs'
 import * as os from 'os'
@@ -155,14 +157,6 @@ interface GPXTrack {
   }>
 }
 
-interface WindowBounds {
-  x?: number
-  y?: number
-  width: number
-  height: number
-  isMaximized?: boolean
-}
-
 interface StoreSchema {
   profiles: CameraProfile[]
   customValues: CustomValues
@@ -201,44 +195,6 @@ function getStore(): Store<StoreSchema> {
     })
   }
   return storeInstance!
-}
-
-const MIN_WIDTH = 600
-const MIN_HEIGHT = 400
-
-/**
- * Validate stored window bounds against current displays.
- * Returns null if the position is off all screens (caller should omit x/y).
- * Width/height are clamped to minimum sizes.
- */
-export function validateWindowBounds(bounds: WindowBounds): WindowBounds | null {
-  const width = Math.max(bounds.width, MIN_WIDTH)
-  const height = Math.max(bounds.height, MIN_HEIGHT)
-
-  // If no position stored, just return validated size
-  if (bounds.x === undefined || bounds.y === undefined) {
-    return { width, height }
-  }
-
-  // Check if position is visible on any display
-  const { screen } = require('electron')
-  const displays: Electron.Display[] = screen.getAllDisplays()
-  const margin = 50 // require at least 50px of the window to be on-screen
-  const isOnScreen = displays.some((d: Electron.Display) => {
-    const { x: dx, y: dy, width: dw, height: dh } = d.workArea
-    return (
-      bounds.x! + width - margin >= dx &&
-      bounds.x! + margin <= dx + dw &&
-      bounds.y! + height - margin >= dy &&
-      bounds.y! + margin <= dy + dh
-    )
-  })
-
-  if (!isOnScreen) {
-    return { width, height }
-  }
-
-  return { x: bounds.x, y: bounds.y, width, height, isMaximized: bounds.isMaximized }
 }
 
 // Thumbnail cache directory
@@ -546,7 +502,9 @@ function createWindow(): void {
   }
 
   const storedBounds = getStore().get('windowBounds') as WindowBounds | undefined
-  const savedBounds = storedBounds ? validateWindowBounds(storedBounds) : null
+  const savedBounds = storedBounds
+    ? validateWindowBounds(storedBounds, screen.getAllDisplays())
+    : null
   const windowSize = savedBounds ?? { width: 800, height: 600 }
 
   mainWindow = new BrowserWindow({
@@ -555,8 +513,8 @@ function createWindow(): void {
     ...(windowSize.x !== undefined && windowSize.y !== undefined
       ? { x: windowSize.x, y: windowSize.y }
       : {}),
-    minWidth: MIN_WIDTH,
-    minHeight: MIN_HEIGHT,
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
     // On Linux the window/taskbar icon must be set explicitly (win/mac take it
     // from the packaged executable). build/icon.png is bundled via the "files"
     // glob in package.json.
@@ -932,6 +890,19 @@ ipcMain.handle('get-cache-setting', (): boolean => {
 // Set thumbnail cache enabled setting
 ipcMain.handle('set-cache-setting', (_, enabled: boolean): void => {
   getStore().set('thumbnailCacheEnabled', enabled)
+})
+
+// Last-used profile persistence
+ipcMain.handle('get-last-used-profile', (): string | null => {
+  return getStore().get('lastUsedProfile') ?? null
+})
+
+ipcMain.handle('set-last-used-profile', (_, profileId: string | null): void => {
+  if (profileId === null) {
+    getStore().delete('lastUsedProfile' as keyof StoreSchema)
+  } else {
+    getStore().set('lastUsedProfile', profileId)
+  }
 })
 
 // Get cached thumbnail from temp directory
