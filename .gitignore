@@ -102,3 +102,7 @@ temp/
 test-results/
 playwright-report/
 screenshots/
+
+# Generated output that should never be committed
+packages/desktop/coverage/
+packages/shared/dist/
