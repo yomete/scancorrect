@@ -1,240 +1,84 @@
-# ScanCorrect - Electron + React App
+# ScanCorrect
 
-## Project Overview
+Desktop app for film photographers to fix EXIF metadata on scanned images. Electron 31 + React 18 + Vite + TypeScript, organized as an npm workspaces monorepo.
 
-This is an Electron + React desktop application for film photographers to easily fix camera metadata in scanned film images. The app provides a simple drag-and-drop interface similar to ImageOptim, where users can drop scanned images and automatically update the camera make/model metadata using stored camera profiles.
-
-## Architecture
-
-- **Frontend**: React + TypeScript + Vite
-- **Backend**: Electron main process
-- **EXIF Editing**: exiftool-vendored (bundled, no external installation required)
-- **Data Storage**: electron-store for profiles
-- **Build System**: electron-builder
-
-## Key Features
-
-1. **Simple Drag & Drop Interface**: Users drag images onto the app window
-2. **Camera Profiles**: Create and save camera/lens combinations for reuse
-3. **Batch Processing**: Process multiple images at once
-4. **Real-time Feedback**: Show processing results for each file
-5. **Persistent Storage**: Save profiles between app sessions
-
-## File Structure
+## Monorepo layout
 
 ```
 film-exif-editor/
-├── package.json
-├── electron/
-│   ├── main.ts          # Main Electron process
-│   ├── preload.ts       # Preload script for IPC
-│   └── tsconfig.json    # TypeScript config for Electron
-├── src/
-│   ├── App.tsx          # Main React component
-│   ├── App.css          # Styles
-│   ├── main.tsx         # React entry point
-│   └── vite-env.d.ts    # Vite types
-├── vite.config.ts       # Vite configuration
-└── tsconfig.json        # TypeScript config for React
+├── packages/
+│   ├── desktop/               # Electron app (main deliverable)
+│   │   ├── electron/          # Main process: main.ts, exif.ts, gpx.ts, geocoding.ts,
+│   │   │                      #   mapbox.ts, scanner-detection.ts, preload.ts
+│   │   ├── src/               # React UI
+│   │   │   ├── store/         # Zustand stores: imageStore.ts, locationStore.ts, settingsStore.ts
+│   │   │   ├── components/    # UI components (Sidebar, ImageGrid, MetadataEditor, etc.)
+│   │   │   ├── constants/     # metadata.ts — standard ISO/aperture/shutter/focal values
+│   │   │   ├── hooks/         # Custom React hooks
+│   │   │   ├── types.ts       # Shared TypeScript interfaces
+│   │   │   └── App.tsx        # Root component
+│   │   └── package.json
+│   ├── website/               # Next.js 16 / React 19 / Tailwind 4 marketing site
+│   └── shared/                # Common types + utils (src/types.ts, src/utils.ts)
+├── package.json               # Workspace root (Node ≥20, npm ≥10)
+└── plans/                     # Implementation plans; see plans/README.md
 ```
 
-## Dependencies
+## Run / build / test
 
-### Production Dependencies
-- `react` + `react-dom`: UI framework
-- `electron-store`: Persistent data storage for profiles
-- `exiftool-vendored`: Bundled ExifTool binaries (no user installation required)
+All commands run from the **repo root** unless noted. Desktop-specific test commands run from `packages/desktop`.
 
-### Development Dependencies
-- `electron`: Desktop app framework
-- `vite`: Build tool and dev server
-- `typescript`: Type safety
-- `electron-builder`: App packaging and distribution
-- `concurrently`: Run multiple commands
-- `wait-on`: Wait for dev server to start
+| Task | Command |
+|---|---|
+| Dev (desktop + website) | `npm run dev` |
+| Dev desktop only | `npm run dev:desktop` (Vite on :5173 + Electron) |
+| Dev website only | `npm run dev:website` (Next.js on :3001) |
+| Build all | `npm run build` |
+| Build desktop | `npm run build:desktop` |
+| Package desktop | `npm run dist` |
+| Typecheck all | `npm run typecheck` |
+| Unit tests | `cd packages/desktop && npm run test` (vitest) |
+| Integration tests | `cd packages/desktop && npm run test:integration` (real exiftool) |
+| E2E tests | `cd packages/desktop && npm run test:e2e` (Playwright) |
+| Smoke tests | `cd packages/desktop && npm run test:smoke` (requires packaged app) |
 
-### ✅ No External Dependencies Required
-The app bundles ExifTool using `exiftool-vendored`, so users don't need to install anything separately. The built app works out of the box on macOS, Windows, and Linux!
+`test:smoke` requires a packaged app — run `npm run pack` first.
 
-## Setup Instructions
+## Architecture notes
 
-1. **Initialize the project:**
-   ```bash
-   mkdir film-exif-editor
-   cd film-exif-editor
-   npm init -y
-   ```
+**IPC boundary**: preload (`packages/desktop/electron/preload.ts`) exposes `window.electronAPI` via `contextBridge`. All file I/O, EXIF reading/writing, geocoding, and GPX parsing happen in the main process. The renderer never touches Node APIs directly.
 
-2. **Install dependencies:**
-   ```bash
-   npm install react react-dom electron-store exiftool-vendored
-   npm install -D @types/react @types/react-dom @vitejs/plugin-react concurrently electron electron-builder typescript vite wait-on
-   ```
+**exiftool-vendored**: bundled; no user installation required. Lifecycle managed in `electron/main.ts` — `exiftool.end()` called on app quit.
 
-3. **Create the file structure and copy the provided code files**
+**electron-store**: persists camera profiles, custom dropdown values, processing log, saved locations, user tier, and thumbnail-cache setting.
 
-   Note: ExifTool is automatically bundled via `exiftool-vendored` - no separate installation required!
+**Backups**: on every EXIF write, backups are stored under `userData/backups` (initialized in `main.ts`). Restore via `restore-backup` IPC handler.
 
-5. **Add additional config files:**
+**State management**: Zustand (`src/store/`) — `imageStore` owns loaded images + pending changes + selection; `locationStore` owns saved locations + history; `settingsStore` owns user preferences (cache toggle, etc.).
 
-   **vite.config.ts:**
-   ```typescript
-   import { defineConfig } from 'vite'
-   import react from '@vitejs/plugin-react'
-   
-   export default defineConfig({
-     plugins: [react()],
-     base: './',
-     build: {
-       outDir: 'dist'
-     }
-   })
-   ```
+## Conventions
 
-   **src/main.tsx:**
-   ```typescript
-   import React from 'react'
-   import ReactDOM from 'react-dom/client'
-   import App from './App.tsx'
-   
-   ReactDOM.createRoot(document.getElementById('root')!).render(
-     <React.StrictMode>
-       <App />
-     </React.StrictMode>,
-   )
-   ```
+- TypeScript strict mode throughout; `noUnusedLocals`/`noUnusedParameters` enforced.
+- `electron/` uses CommonJS (`"module": "commonjs"`); `src/` uses ESNext modules via Vite.
+- No semicolons in `electron/` source (match existing style before editing).
+- Test layers: vitest unit (`src/__tests__`, `electron/__tests__`), vitest integration (`vitest.integration.config.ts`), Playwright E2E (`playwright.config.ts`), Playwright smoke (`playwright.smoke.config.ts`).
+- Mocks live in `packages/desktop/electron/__mocks__` (electron-store, exiftool-vendored).
 
-   **src/vite-env.d.ts:**
-   ```typescript
-   /// <reference types="vite/client" />
-   ```
+## Shipped features (as of v0.3.2)
 
-   **public/index.html:**
-   ```html
-   <!DOCTYPE html>
-   <html lang="en">
-   <head>
-     <meta charset="UTF-8" />
-     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-     <title>ScanCorrect</title>
-   </head>
-   <body>
-     <div id="root"></div>
-     <script type="module" src="/src/main.tsx"></script>
-   </body>
-   </html>
-   ```
+- Drag-and-drop batch image loading (JPG, JPEG, TIFF)
+- Camera profiles with defaults: ISO, aperture, shutter speed, focal length, exposure compensation, film stock, location
+- EXIF read/write with automatic backups + restore (`restore-backup` handler)
+- Scanner-metadata detection (hardcoded brand list in `electron/scanner-detection.ts`)
+- Geocoding via Nominatim (free, rate-limited); saved locations + search history
+- GPX track import with photo time-matching (paid tier)
+- Interactive Mapbox map picker (paid tier; token via `VITE_MAPBOX_TOKEN` or user settings)
+- Thumbnails with disk cache (exiftool extracts embedded JPEG; async loading with spinners)
+- Processing log (persisted in electron-store)
+- Custom value lists for dropdowns (persisted)
+- Dark / light / system theme
+- macOS signed + notarized releases via GitHub Actions
 
-   **electron/tsconfig.json:**
-   ```json
-   {
-     "compilerOptions": {
-       "target": "ES2020",
-       "lib": ["ES2020"],
-       "module": "commonjs",
-       "moduleResolution": "node",
-       "outDir": "../dist-electron",
-       "strict": true,
-       "esModuleInterop": true,
-       "skipLibCheck": true,
-       "resolveJsonModule": true
-     },
-     "include": ["*.ts"]
-   }
-   ```
+## Roadmap
 
-   **tsconfig.json (root):**
-   ```json
-   {
-     "compilerOptions": {
-       "target": "ES2020",
-       "useDefineForClassFields": true,
-       "lib": ["ES2020", "DOM", "DOM.Iterable"],
-       "module": "ESNext",
-       "skipLibCheck": true,
-       "moduleResolution": "bundler",
-       "allowImportingTsExtensions": true,
-       "resolveJsonModule": true,
-       "isolatedModules": true,
-       "noEmit": true,
-       "jsx": "react-jsx",
-       "strict": true,
-       "noUnusedLocals": true,
-       "noUnusedParameters": true,
-       "noFallthroughCasesInSwitch": true
-     },
-     "include": ["src"],
-     "references": [{ "path": "./tsconfig.node.json" }]
-   }
-   ```
-
-## Development Workflow
-
-1. **Start development server:**
-   ```bash
-   npm run dev
-   ```
-   This runs both the Vite dev server and Electron concurrently.
-
-2. **Build for production:**
-   ```bash
-   npm run build
-   ```
-
-3. **Create distributable:**
-   ```bash
-   npm run dist
-   ```
-
-## Core Functionality
-
-### Profile Management
-- Users can create camera profiles with make, model, and optional lens info
-- Profiles are stored persistently using electron-store
-- Dropdown selection for active profile
-
-### Image Processing
-- Drag and drop support for image files (JPG, JPEG, TIFF)
-- Batch processing of multiple files
-- Uses ExifTool via child process to modify EXIF data
-- Real-time feedback showing success/failure for each file
-
-### IPC Communication
-- `get-profiles`: Retrieve saved profiles
-- `save-profile`: Create or update a profile
-- `delete-profile`: Remove a profile
-- `edit-exif`: Process images with selected profile
-
-## Technical Implementation Notes
-
-1. **Security**: Uses context isolation and preload script for secure IPC
-2. **File Handling**: Processes files in the main process using Node.js child_process
-3. **Error Handling**: Graceful handling of ExifTool errors and file access issues
-4. **UI State**: React state management for profiles, processing status, and results
-5. **Styling**: Custom CSS with dark theme matching modern desktop apps
-
-## Future Enhancements
-
-- [ ] Add more EXIF fields (ISO, focal length, aperture)
-- [ ] Image preview functionality
-- [ ] Batch file renaming
-- [ ] Profile import/export
-- [ ] Support for additional image formats
-- [ ] Undo functionality
-- [ ] Progress indicators for large batches
-- [ ] Settings panel with preferences
-
-## Troubleshooting
-
-- **File permissions**: App needs read/write access to image files
-- **Large batches**: Consider implementing progress bars for better UX
-- **Build issues**: See [BUILD.md](packages/desktop/BUILD.md) for detailed build instructions
-
-## Build Notes
-
-- App uses electron-builder for packaging
-- Configured for macOS, Windows, and Linux
-- ✅ **ExifTool is bundled** via `exiftool-vendored` - no separate installation required
-- Built apps are fully self-contained and work out of the box
-- See [BUNDLING-EXIFTOOL.md](BUNDLING-EXIFTOOL.md) for technical details
-- See [packages/desktop/BUILD.md](packages/desktop/BUILD.md) for build instructions
+See `plans/README.md` for planned work.
