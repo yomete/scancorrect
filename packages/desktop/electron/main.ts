@@ -4,7 +4,7 @@ import type { WindowBounds } from './window-state'
 import * as path from 'path'
 import { ExifTool } from 'exiftool-vendored'
 import { readExifData, initBackupDir } from './exif'
-import { getStore } from './store'
+import { getStore, initStore } from './store'
 import { type ExifSnapshot } from './spotlight'
 import { registerProfileHandlers } from './handlers/profiles'
 import { registerExifHandlers } from './handlers/exif-handlers'
@@ -250,7 +250,8 @@ function registerAllHandlers(): void {
   })
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await initStore()
   initBackupDir(path.join(app.getPath('userData'), 'backups'))
   registerAllHandlers()
   createWindow()

@@ -61,13 +61,14 @@
     "zustand": "^5.0.9"
   },
   "dependencies": {
-    "electron-store": "^8.2.0",
+    "electron-store": "^11.0.0",
     "exiftool-vendored": "^35.20.0",
     "fast-xml-parser": "^5.8.0"
   },
   "build": {
     "appId": "com.scancorrect.app",
     "productName": "ScanCorrect",
+    "electronVersion": "42.4.0",
     "npmRebuild": false,
     "compression": "maximum",
     "icon": "build/icon.icns",
