@@ -41,7 +41,7 @@
     "7zip-bin": "^5.2.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^8.2.2",
-    "electron": "^31.0.2",
+    "electron": "^42.4.0",
     "electron-builder": "^26.0.0",
     "electron-reload": "^2.0.0-alpha.1",
     "eslint": "^9.34.0",
@@ -68,7 +68,6 @@
   "build": {
     "appId": "com.scancorrect.app",
     "productName": "ScanCorrect",
-    "electronVersion": "31.0.2",
     "npmRebuild": false,
     "compression": "maximum",
     "icon": "build/icon.icns",

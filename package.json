@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "electron": "^31.0.2"
+    "electron": "^42.4.0"
   },
   "overrides": {
     "postcss": "^8.5.14",
