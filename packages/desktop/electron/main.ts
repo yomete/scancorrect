@@ -7,30 +7,24 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import type Store from 'electron-store'
 import { ExifTool } from 'exiftool-vendored'
-import { geocodeLocation, GeocodingResult } from './geocoding'
-import { readExifData, writeExifData, restoreFromBackup, initBackupDir, ExifData } from './exif'
+import { geocodeLocation } from './geocoding'
+import { readExifData, writeExifData, restoreFromBackup, initBackupDir } from './exif'
 import { isLikelyScannerMetadata } from './scanner-detection'
-import { parseGPX, matchPhotosToGPX, GPXMatchResult } from './gpx'
-
-interface CustomValues {
-  isoValues: number[]
-  apertureValues: number[]
-  shutterSpeeds: number[]
-  focalLengths: number[]
-}
-
-interface ProcessingLogEntry {
-  id: string
-  timestamp: string | Date
-  filePath: string
-  filename: string
-  profileUsed?: string
-  changesApplied: Partial<ExifData>
-  success: boolean
-  error?: string
-  warning?: string
-  backupPath?: string
-}
+import { parseGPX, matchPhotosToGPX } from './gpx'
+import type {
+  CameraProfile,
+  ExifData,
+  CustomValues,
+  ProcessingLogEntry,
+  FinderMetadataSnapshot,
+  FolderMetadataVerificationFile,
+  FolderMetadataVerificationResult,
+  GeocodingResult,
+  SavedLocation,
+  LocationHistoryEntry,
+  GPXTrack,
+  GPXMatchResult,
+} from './ipc-types'
 
 interface FileSnapshot {
   size: number
@@ -73,35 +67,6 @@ interface MetadataWriteLogEntry {
   }
 }
 
-interface FinderMetadataSnapshot {
-  make?: string
-  model?: string
-  contentCreationDate?: string
-  latitude?: string
-  longitude?: string
-  error?: string
-}
-
-interface FolderMetadataVerificationFile {
-  filePath: string
-  filename: string
-  embedded: ExifSnapshot
-  finder: FinderMetadataSnapshot
-  embeddedPresent: boolean
-  finderVisible: boolean
-}
-
-interface FolderMetadataVerificationResult {
-  folderPath: string
-  total: number
-  embeddedPresent: number
-  embeddedMissing: number
-  finderVisible: number
-  finderMissing: number
-  logPath: string
-  files: FolderMetadataVerificationFile[]
-}
-
 interface MetadataVerifyFolderLogEntry extends FolderMetadataVerificationResult {
   schemaVersion: 1
   event: 'metadata.verifyFolder'
@@ -119,40 +84,6 @@ interface MetadataSpotlightFollowUpLogEntry {
   filename: string
   delayMs: number
   spotlight: SpotlightReimportResult
-}
-
-interface SavedLocation {
-  id: string
-  name: string
-  latitude: number
-  longitude: number
-  createdAt: string
-  usageCount: number
-  lastUsedAt?: string
-  isFavorite: boolean
-}
-
-interface LocationHistoryEntry {
-  id: string
-  location: {
-    name: string
-    latitude: number
-    longitude: number
-  }
-  timestamp: string
-  source: 'search' | 'map' | 'gpx' | 'manual'
-}
-
-interface GPXTrack {
-  id: string
-  name: string
-  importedAt: string
-  points: Array<{
-    latitude: number
-    longitude: number
-    timestamp: string
-    elevation?: number
-  }>
 }
 
 interface StoreSchema {
@@ -457,14 +388,6 @@ const exiftool = new ExifTool({
   taskTimeoutMillis: 10000,
   maxProcs: 10
 })
-
-interface CameraProfile {
-  id: string
-  name: string
-  make: string
-  model: string
-  lens?: string
-}
 
 let mainWindow: BrowserWindow | null = null
 let forceCloseWindow = false
