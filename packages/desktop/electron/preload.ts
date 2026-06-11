@@ -26,7 +26,7 @@ export interface ElectronAPI {
   getPathForFile: (file: File) => string
 
   // Geocoding
-  geocodeLocation: (query: string) => Promise<GeocodingResult[]>
+  geocodeLocation: (query: string) => Promise<GeocodingResult[] | { error: 'rate-limited' | 'offline' | 'failed' }>
 
   // EXIF reading and writing
   readExif: (filePath: string) => Promise<{ data: ExifData; isScanner: boolean } | { error: string }>

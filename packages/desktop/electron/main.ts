@@ -7,7 +7,7 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import type Store from 'electron-store'
 import { ExifTool } from 'exiftool-vendored'
-import { geocodeLocation } from './geocoding'
+import { geocodeLocation, GeocodingResponse } from './geocoding'
 import { readExifData, writeExifData, restoreFromBackup, initBackupDir } from './exif'
 import { isLikelyScannerMetadata } from './scanner-detection'
 import { parseGPX, matchPhotosToGPX } from './gpx'
@@ -587,7 +587,7 @@ ipcMain.handle('force-close-window', () => {
 })
 
 // Geocoding handler
-ipcMain.handle('geocode-location', async (_, query: string): Promise<GeocodingResult[]> => {
+ipcMain.handle('geocode-location', async (_, query: string): Promise<GeocodingResponse> => {
   return geocodeLocation(query)
 })
 
