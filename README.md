@@ -132,7 +132,7 @@ Click the theme button in the footer to switch between:
 - **Frontend**: React 18 + TypeScript + Vite
 - **Backend**: Electron (main process)
 - **EXIF Processing**: ExifTool (bundled via exiftool-vendored)
-- **Styling**: Tailwind CSS v3 with dark mode
+- **Styling**: Tailwind CSS v4 (website) / custom CSS (desktop)
 - **Icons**: Iconify React
 - **Storage**: electron-store
 - **Build**: electron-builder
@@ -176,17 +176,7 @@ film-exif-editor/
 
 ### IPC API
 
-The app uses Electron's IPC for secure communication:
-
-```typescript
-interface ElectronAPI {
-  getProfiles(): Promise<CameraProfile[]>
-  saveProfile(profile: CameraProfile): Promise<void>
-  deleteProfile(profileId: string): Promise<void>
-  editExif(filePaths: string[], profile: CameraProfile): Promise<ProcessResult[]>
-  showOpenDialog(): Promise<string[] | undefined>
-}
-```
+The app uses Electron's IPC for secure communication. `window.electronAPI` (exposed via `contextBridge` in `packages/desktop/electron/preload.ts`) includes: profile CRUD, EXIF read/write with backups, geocoding, thumbnail extraction/caching, processing log, custom values, saved locations, GPX import, Mapbox token management, and window controls. See `preload.ts` for the full `ElectronAPI` interface.
 
 ## Contributing
 

@@ -1,123 +1,18 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-
-interface CameraProfile {
-  id: string
-  name: string
-  make: string
-  model: string
-  lens?: string
-}
-
-interface GeocodingResult {
-  displayName: string
-  latitude: number
-  longitude: number
-  type: string
-}
-
-interface ExifData {
-  make?: string
-  model?: string
-  lens?: string
-  iso?: number
-  aperture?: number
-  shutterSpeed?: number
-  focalLength?: number
-  exposureComp?: number
-  filmStock?: string
-  location?: {
-    name: string
-    latitude: number
-    longitude: number
-  }
-  dateOriginal?: string
-}
-
-interface CustomValues {
-  isoValues: number[]
-  apertureValues: number[]
-  shutterSpeeds: number[]
-  focalLengths: number[]
-}
-
-interface ProcessingLogEntry {
-  id: string
-  timestamp: string | Date
-  filePath: string
-  filename: string
-  profileUsed?: string
-  changesApplied: Partial<ExifData>
-  success: boolean
-  error?: string
-  warning?: string
-  backupPath?: string
-}
-
-interface FinderMetadataSnapshot {
-  make?: string
-  model?: string
-  contentCreationDate?: string
-  latitude?: string
-  longitude?: string
-  error?: string
-}
-
-interface FolderMetadataVerificationFile {
-  filePath: string
-  filename: string
-  embedded: {
-    data?: ExifData
-    error?: string
-  }
-  finder: FinderMetadataSnapshot
-  embeddedPresent: boolean
-  finderVisible: boolean
-}
-
-interface FolderMetadataVerificationResult {
-  folderPath: string
-  total: number
-  embeddedPresent: number
-  embeddedMissing: number
-  finderVisible: number
-  finderMissing: number
-  logPath: string
-  files: FolderMetadataVerificationFile[]
-}
-
-interface SavedLocation {
-  id: string
-  name: string
-  latitude: number
-  longitude: number
-  createdAt: string
-  usageCount: number
-  lastUsedAt?: string
-  isFavorite: boolean
-}
-
-interface LocationHistoryEntry {
-  id: string
-  location: {
-    name: string
-    latitude: number
-    longitude: number
-  }
-  timestamp: string
-  source: 'search' | 'map' | 'gpx' | 'manual'
-}
-
-interface GPXTrack {
-  id: string
-  name: string
-  importedAt: string
-  points: Array<{
-    latitude: number
-    longitude: number
-    timestamp: string
-    elevation?: number
-  }>
-}
+import type {
+  CameraProfile,
+  ExifData,
+  CustomValues,
+  ProcessingLogEntry,
+  FinderMetadataSnapshot,
+  FolderMetadataVerificationFile,
+  FolderMetadataVerificationResult,
+  GeocodingResult,
+  SavedLocation,
+  LocationHistoryEntry,
+  GPXTrack,
+  GPXMatchResult,
+} from './ipc-types'
 
 export interface ElectronAPI {
   // Existing profile methods
@@ -131,7 +26,7 @@ export interface ElectronAPI {
   getPathForFile: (file: File) => string
 
   // Geocoding
-  geocodeLocation: (query: string) => Promise<GeocodingResult[]>
+  geocodeLocation: (query: string) => Promise<GeocodingResult[] | { error: 'rate-limited' | 'offline' | 'failed' }>
 
   // EXIF reading and writing
   readExif: (filePath: string) => Promise<{ data: ExifData; isScanner: boolean } | { error: string }>
@@ -182,14 +77,7 @@ export interface ElectronAPI {
     track: GPXTrack,
     images: Array<{ path: string; timestamp: string }>,
     toleranceSeconds: number
-  ) => Promise<Array<{
-    imagePath: string
-    imageTimestamp: string
-    matchedPoint?: { latitude: number; longitude: number; timestamp: string; elevation?: number }
-    matchedLocation?: { name: string; latitude: number; longitude: number }
-    timeDifferenceSeconds?: number
-    confidence: 'exact' | 'close' | 'far' | 'no_match'
-  }>>
+  ) => Promise<GPXMatchResult[]>
 
   // Mapbox Configuration
   getMapboxToken: () => Promise<string | undefined>
