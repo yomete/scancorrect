@@ -1,4 +1,4 @@
-import type Store from 'electron-store'
+import type Store from 'electron-store' with { 'resolution-mode': 'import' }
 import type {
   CameraProfile,
   CustomValues,

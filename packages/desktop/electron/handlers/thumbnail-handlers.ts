@@ -5,7 +5,7 @@ import * as os from 'os'
 import { nativeImage } from 'electron'
 import type { IpcMain } from 'electron'
 import type { ExifTool } from 'exiftool-vendored'
-import type Store from 'electron-store'
+import type Store from 'electron-store' with { 'resolution-mode': 'import' }
 import type { StoreSchema } from '../store'
 import { assertAbsolutePath } from './guard'
 

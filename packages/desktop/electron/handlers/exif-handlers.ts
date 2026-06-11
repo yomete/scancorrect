@@ -2,7 +2,7 @@ import * as path from 'path'
 import * as fs from 'fs'
 import type { IpcMain, Dialog, BrowserWindow } from 'electron'
 import type { ExifTool } from 'exiftool-vendored'
-import type Store from 'electron-store'
+import type Store from 'electron-store' with { 'resolution-mode': 'import' }
 import { readExifData, writeExifData, restoreFromBackup } from '../exif'
 import { isLikelyScannerMetadata } from '../scanner-detection'
 import {
