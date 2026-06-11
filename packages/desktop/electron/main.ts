@@ -12,6 +12,7 @@ import { registerLocationHandlers } from './handlers/locations'
 import { registerGpxHandlers } from './handlers/gpx-handlers'
 import { registerThumbnailHandlers } from './handlers/thumbnail-handlers'
 import { registerMiscHandlers } from './handlers/misc'
+import { initAutoUpdater } from './updater'
 
 // Initialize ExifTool with proper configuration
 const exiftool = new ExifTool({
@@ -254,6 +255,7 @@ app.whenReady().then(() => {
   initBackupDir(path.join(app.getPath('userData'), 'backups'))
   registerAllHandlers()
   createWindow()
+  initAutoUpdater(() => mainWindow)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

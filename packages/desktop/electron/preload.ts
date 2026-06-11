@@ -85,6 +85,10 @@ export interface ElectronAPI {
   getLastUsedProfile: () => Promise<string | null>
   setLastUsedProfile: (profileId: string | null) => Promise<void>
 
+  // Auto-update
+  onUpdateReady: (callback: (version: string) => void) => () => void
+  installUpdateNow: () => Promise<void>
+
 }
 
 const electronAPI: ElectronAPI = {
@@ -167,6 +171,14 @@ const electronAPI: ElectronAPI = {
   // Last-used profile
   getLastUsedProfile: () => ipcRenderer.invoke('get-last-used-profile'),
   setLastUsedProfile: (profileId: string | null) => ipcRenderer.invoke('set-last-used-profile', profileId),
+
+  // Auto-update
+  onUpdateReady: (callback: (version: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, version: string) => callback(version)
+    ipcRenderer.on('update-ready', listener)
+    return () => ipcRenderer.removeListener('update-ready', listener)
+  },
+  installUpdateNow: () => ipcRenderer.invoke('install-update-now'),
 
 }
 
