@@ -1,23 +1,11 @@
+// Note: this CameraProfile is for shared utilities only (formatProfileName etc.)
+// The canonical IPC-boundary CameraProfile lives in packages/desktop/electron/ipc-types.ts
 export interface CameraProfile {
   id: string
   name: string
   make: string
   model: string
   lens?: string
-}
-
-export interface ProcessResult {
-  file: string
-  success: boolean
-  error?: string
-}
-
-export interface ElectronAPI {
-  getProfiles(): Promise<CameraProfile[]>
-  saveProfile(profile: CameraProfile): Promise<void>
-  deleteProfile(profileId: string): Promise<void>
-  editExif(filePaths: string[], profile: CameraProfile): Promise<ProcessResult[]>
-  showOpenDialog(): Promise<string[] | undefined>
 }
 
 export type Theme = 'light' | 'dark' | 'system'
