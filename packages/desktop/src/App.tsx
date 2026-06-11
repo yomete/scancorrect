@@ -219,12 +219,18 @@ function App() {
   };
 
   const handleGeocode = async (query: string): Promise<GeocodingResult[]> => {
-    try {
-      return await window.electronAPI.geocodeLocation(query);
-    } catch (error) {
-      console.error("Geocoding failed:", error);
-      return [];
+    const response = await window.electronAPI.geocodeLocation(query);
+    if (Array.isArray(response)) {
+      return response;
     }
+    // Typed error from geocoding module — surface as a thrown message so the
+    // location search UI can display it inline via its existing error state.
+    const messages: Record<string, string> = {
+      'rate-limited': 'Nominatim is rate-limiting requests — please try again in a moment.',
+      'offline': 'No network connection. Please check your internet and try again.',
+      'failed': 'Location search failed. Please try again.',
+    };
+    throw new Error(messages[response.error] ?? 'Location search failed.');
   };
 
   const applyProfileToPendingChanges = (
