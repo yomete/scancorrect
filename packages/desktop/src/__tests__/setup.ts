@@ -35,6 +35,10 @@ vi.stubGlobal('electronAPI', {
   getGpxTracks: vi.fn().mockResolvedValue([]),
   saveGpxTrack: vi.fn().mockResolvedValue(undefined),
   deleteGpxTrack: vi.fn().mockResolvedValue(undefined),
+  // Uppercase aliases used by locationStore
+  getGPXTracks: vi.fn().mockResolvedValue([]),
+  saveGPXTrack: vi.fn().mockResolvedValue(undefined),
+  deleteGPXTrack: vi.fn().mockResolvedValue(undefined),
   showOpenGpxDialog: vi.fn().mockResolvedValue(null),
   parseGpx: vi.fn().mockResolvedValue(null),
   matchPhotosToGpx: vi.fn().mockResolvedValue([]),
