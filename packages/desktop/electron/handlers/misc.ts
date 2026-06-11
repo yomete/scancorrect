@@ -49,4 +49,16 @@ export function registerMiscHandlers({
       getStore().delete('mapboxAccessToken')
     }
   })
+
+  ipcMain.handle('get-last-used-profile', (): string | null => {
+    return getStore().get('lastUsedProfile') ?? null
+  })
+
+  ipcMain.handle('set-last-used-profile', (_, profileId: string | null): void => {
+    if (profileId === null) {
+      getStore().delete('lastUsedProfile')
+    } else {
+      getStore().set('lastUsedProfile', profileId)
+    }
+  })
 }

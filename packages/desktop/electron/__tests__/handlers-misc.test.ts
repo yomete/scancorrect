@@ -70,6 +70,29 @@ describe('registerMiscHandlers', () => {
     })
   })
 
+  describe('last-used profile', () => {
+    it('get-last-used-profile returns null initially', async () => {
+      expect(await ipc.invoke('get-last-used-profile')).toBeNull()
+    })
+
+    it('set-last-used-profile stores the profile id', async () => {
+      await ipc.invoke('set-last-used-profile', 'profile-1')
+      expect(store.get('lastUsedProfile')).toBe('profile-1')
+    })
+
+    it('get-last-used-profile returns stored id', async () => {
+      store.set('lastUsedProfile', 'profile-1')
+      expect(await ipc.invoke('get-last-used-profile')).toBe('profile-1')
+    })
+
+    it('set-last-used-profile with null deletes the stored id', async () => {
+      store.set('lastUsedProfile', 'profile-1')
+      await ipc.invoke('set-last-used-profile', null)
+      expect(store.get('lastUsedProfile')).toBeUndefined()
+      expect(await ipc.invoke('get-last-used-profile')).toBeNull()
+    })
+  })
+
   describe('show-open-dialog', () => {
     it('returns undefined when mainWindow is null', async () => {
       const result = await ipc.invoke('show-open-dialog')

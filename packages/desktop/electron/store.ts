@@ -7,6 +7,7 @@ import type {
   LocationHistoryEntry,
   GPXTrack,
 } from './ipc-types'
+import type { WindowBounds } from './window-state'
 
 export interface StoreSchema {
   profiles: CameraProfile[]
@@ -17,6 +18,8 @@ export interface StoreSchema {
   locationHistory: LocationHistoryEntry[]
   gpxTracks: GPXTrack[]
   mapboxAccessToken?: string
+  windowBounds?: WindowBounds
+  lastUsedProfile?: string
 }
 
 // Lazy-load electron-store to avoid module-level electron initialization

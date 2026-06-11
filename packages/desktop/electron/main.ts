@@ -1,4 +1,6 @@
-import { app, BrowserWindow, ipcMain, dialog, shell, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, Menu, screen } from 'electron'
+import { validateWindowBounds, MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT } from './window-state'
+import type { WindowBounds } from './window-state'
 import * as path from 'path'
 import { ExifTool } from 'exiftool-vendored'
 import { readExifData, initBackupDir } from './exif'
@@ -84,11 +86,20 @@ function createWindow(): void {
     Menu.setApplicationMenu(null)
   }
 
+  const storedBounds = getStore().get('windowBounds') as WindowBounds | undefined
+  const savedBounds = storedBounds
+    ? validateWindowBounds(storedBounds, screen.getAllDisplays())
+    : null
+  const windowSize = savedBounds ?? { width: 800, height: 600 }
+
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
-    minWidth: 600,
-    minHeight: 400,
+    width: windowSize.width,
+    height: windowSize.height,
+    ...(windowSize.x !== undefined && windowSize.y !== undefined
+      ? { x: windowSize.x, y: windowSize.y }
+      : {}),
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
     // On Linux the window/taskbar icon must be set explicitly (win/mac take it
     // from the packaged executable). build/icon.png is bundled via the "files"
     // glob in package.json.
@@ -102,6 +113,10 @@ function createWindow(): void {
     },
     show: false
   })
+
+  if (savedBounds?.isMaximized) {
+    mainWindow.maximize()
+  }
 
   if (isDev()) {
     mainWindow.loadURL('http://localhost:5173')
@@ -118,6 +133,21 @@ function createWindow(): void {
 
   mainWindow.on('closed', () => {
     mainWindow = null
+  })
+
+  // Persist window bounds before the window is destroyed
+  mainWindow.on('close', () => {
+    if (mainWindow) {
+      const isMaximized = mainWindow.isMaximized()
+      const bounds = mainWindow.getNormalBounds()
+      getStore().set('windowBounds', {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        isMaximized
+      })
+    }
   })
 
   // Handle close with unsaved changes warning
