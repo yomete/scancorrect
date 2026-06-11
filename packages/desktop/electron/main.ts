@@ -3,20 +3,26 @@ import * as path from 'path'
 import * as fs from 'fs'
 import * as os from 'os'
 import * as crypto from 'crypto'
-import { execFile } from 'child_process'
-import { promisify } from 'util'
-import type Store from 'electron-store'
 import { ExifTool } from 'exiftool-vendored'
 import { geocodeLocation, GeocodingResponse } from './geocoding'
 import { readExifData, writeExifData, restoreFromBackup, initBackupDir } from './exif'
 import { isLikelyScannerMetadata } from './scanner-detection'
 import { parseGPX, matchPhotosToGPX } from './gpx'
+import { getStore } from './store'
+import {
+  scheduleSpotlightFollowUp,
+  appendMetadataWriteLog,
+  getFileSnapshot,
+  getFinderMetadataSnapshot,
+  hasFinderMetadata,
+  type ExifSnapshot,
+  type FileSnapshot,
+} from './spotlight'
 import type {
   CameraProfile,
   ExifData,
   CustomValues,
   ProcessingLogEntry,
-  FinderMetadataSnapshot,
   FolderMetadataVerificationFile,
   FolderMetadataVerificationResult,
   GeocodingResult,
@@ -26,108 +32,10 @@ import type {
   GPXMatchResult,
 } from './ipc-types'
 
-interface FileSnapshot {
-  size: number
-  modifiedAt: string
-}
-
-interface ExifSnapshot {
-  data?: ExifData
-  error?: string
-}
-
-interface SpotlightReimportResult {
-  attempted: boolean
-  durationMs: number
-  finder: FinderMetadataSnapshot
-  finderVisible: boolean
-  error?: string
-}
-
-interface MetadataWriteLogEntry {
-  schemaVersion: 1
-  event: 'metadata.write'
-  timestamp: string
-  appVersion: string
-  filePath: string
-  filename: string
-  keepBackup: boolean
-  requestedChanges: ExifData
-  before: ExifSnapshot
-  after?: ExifSnapshot
-  fileBefore?: FileSnapshot
-  fileAfter?: FileSnapshot
-  spotlight?: SpotlightReimportResult
-  durationMs: number
-  result: {
-    success: boolean
-    backupPath?: string
-    error?: string
-    warning?: string
-  }
-}
-
-interface MetadataVerifyFolderLogEntry extends FolderMetadataVerificationResult {
-  schemaVersion: 1
-  event: 'metadata.verifyFolder'
-  timestamp: string
-  appVersion: string
-  durationMs: number
-}
-
-interface MetadataSpotlightFollowUpLogEntry {
-  schemaVersion: 1
-  event: 'metadata.spotlightFollowUp'
-  timestamp: string
-  appVersion: string
-  filePath: string
-  filename: string
-  delayMs: number
-  spotlight: SpotlightReimportResult
-}
-
-interface StoreSchema {
-  profiles: CameraProfile[]
-  customValues: CustomValues
-  processingLog: ProcessingLogEntry[]
-  thumbnailCacheEnabled: boolean
-  savedLocations: SavedLocation[]
-  locationHistory: LocationHistoryEntry[]
-  gpxTracks: GPXTrack[]
-  mapboxAccessToken?: string
-}
-
-// Lazy-load electron-store to avoid module-level electron initialization
-let storeInstance: Store<StoreSchema> | null = null
-function getStore(): Store<StoreSchema> {
-  if (!storeInstance) {
-    // Dynamic require to avoid module-level electron initialization
-    const StoreClass = require('electron-store').default
-    storeInstance = new StoreClass({
-      defaults: {
-        profiles: [],
-        customValues: {
-          isoValues: [],
-          apertureValues: [],
-          shutterSpeeds: [],
-          focalLengths: []
-        },
-        processingLog: [],
-        thumbnailCacheEnabled: true,
-        savedLocations: [],
-        locationHistory: [],
-        gpxTracks: [],
-        mapboxAccessToken: undefined
-      }
-    })
-  }
-  return storeInstance!
-}
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.tif', '.tiff'])
 
 // Thumbnail cache directory
 const THUMBNAIL_CACHE_DIR = path.join(os.tmpdir(), 'scancorrect-thumbs')
-const execFileAsync = promisify(execFile)
-const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.tif', '.tiff'])
 
 // Ensure thumbnail cache directory exists
 function ensureThumbnailCacheDir(): void {
@@ -147,26 +55,6 @@ function getMetadataWriteLogPath(): string {
 
 function shouldWriteMetadataDiagnostics(): boolean {
   return process.env.SCANCORRECT_METADATA_DIAGNOSTICS === '1' || isDev()
-}
-
-async function appendMetadataWriteLog(
-  entry: MetadataWriteLogEntry | MetadataVerifyFolderLogEntry | MetadataSpotlightFollowUpLogEntry
-): Promise<void> {
-  const logPath = getMetadataWriteLogPath()
-  await fs.promises.mkdir(path.dirname(logPath), { recursive: true })
-  await fs.promises.appendFile(logPath, `${JSON.stringify(entry)}\n`, 'utf8')
-}
-
-async function getFileSnapshot(filePath: string): Promise<FileSnapshot | undefined> {
-  try {
-    const stat = await fs.promises.stat(filePath)
-    return {
-      size: stat.size,
-      modifiedAt: stat.mtime.toISOString()
-    }
-  } catch {
-    return undefined
-  }
 }
 
 async function getExifSnapshot(filePath: string): Promise<ExifSnapshot> {
@@ -195,152 +83,6 @@ function hasEmbeddedMetadata(snapshot: ExifSnapshot): boolean {
     data.dateOriginal ||
     data.dateTimeOriginal
   )
-}
-
-function parseMdlsValue(value: string): string | undefined {
-  const trimmed = value.trim()
-  if (!trimmed || trimmed === '(null)') return undefined
-  return trimmed.replace(/^"|"$/g, '')
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-async function getFinderMetadataSnapshot(filePath: string): Promise<FinderMetadataSnapshot> {
-  if (process.platform !== 'darwin') return {}
-
-  const keys = [
-    'kMDItemAcquisitionMake',
-    'kMDItemAcquisitionModel',
-    'kMDItemContentCreationDate',
-    'kMDItemLatitude',
-    'kMDItemLongitude'
-  ]
-
-  try {
-    const { stdout } = await execFileAsync('/usr/bin/mdls', [
-      '-raw',
-      ...keys.flatMap((key) => ['-name', key]),
-      filePath
-    ])
-    const values = stdout.split(/\0|\r?\n/).filter((value) => value.length > 0)
-
-    return {
-      make: parseMdlsValue(values[0] || ''),
-      model: parseMdlsValue(values[1] || ''),
-      contentCreationDate: parseMdlsValue(values[2] || ''),
-      latitude: parseMdlsValue(values[3] || ''),
-      longitude: parseMdlsValue(values[4] || '')
-    }
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Unknown error reading Finder metadata' }
-  }
-}
-
-function hasFinderMetadata(snapshot: FinderMetadataSnapshot): boolean {
-  return Boolean(
-    snapshot.make ||
-    snapshot.model ||
-    snapshot.contentCreationDate ||
-    snapshot.latitude ||
-    snapshot.longitude
-  )
-}
-
-async function reimportSpotlightMetadata(filePath: string): Promise<SpotlightReimportResult> {
-  const startedAt = Date.now()
-
-  if (process.platform !== 'darwin') {
-    return {
-      attempted: false,
-      durationMs: 0,
-      finder: {},
-      finderVisible: false
-    }
-  }
-
-  try {
-    await execFileAsync('/usr/bin/mdimport', ['-i', filePath], { timeout: 5000 })
-    await sleep(500)
-    const finder = await getFinderMetadataSnapshot(filePath)
-
-    return {
-      attempted: true,
-      durationMs: Date.now() - startedAt,
-      finder,
-      finderVisible: hasFinderMetadata(finder)
-    }
-  } catch (error) {
-    const finder = await getFinderMetadataSnapshot(filePath)
-
-    return {
-      attempted: true,
-      durationMs: Date.now() - startedAt,
-      finder,
-      finderVisible: hasFinderMetadata(finder),
-      error: error instanceof Error ? error.message : 'Unknown error reimporting Spotlight metadata'
-    }
-  }
-}
-
-async function triggerSpotlightImport(filePath: string): Promise<void> {
-  if (process.platform !== 'darwin') return
-
-  try {
-    await execFileAsync('/usr/bin/mdimport', ['-i', filePath], { timeout: 5000 })
-  } catch (error) {
-    console.warn('Failed to trigger Spotlight import:', error)
-  }
-}
-
-let spotlightTaskActive = false
-const spotlightTasks: Array<() => Promise<void>> = []
-
-function runNextSpotlightTask(): void {
-  if (spotlightTaskActive) return
-
-  const task = spotlightTasks.shift()
-  if (!task) return
-
-  spotlightTaskActive = true
-  void task().finally(() => {
-    spotlightTaskActive = false
-    runNextSpotlightTask()
-  })
-}
-
-function enqueueSpotlightTask(task: () => Promise<void>): void {
-  spotlightTasks.push(task)
-  runNextSpotlightTask()
-}
-
-function scheduleSpotlightFollowUp(filePath: string, delayMs: number, writeDiagnostics: boolean): void {
-  const timeout = setTimeout(() => {
-    enqueueSpotlightTask(async () => {
-      try {
-        if (writeDiagnostics) {
-          const spotlight = await reimportSpotlightMetadata(filePath)
-          await appendMetadataWriteLog({
-            schemaVersion: 1,
-            event: 'metadata.spotlightFollowUp',
-            timestamp: new Date().toISOString(),
-            appVersion: app.getVersion(),
-            filePath,
-            filename: path.basename(filePath),
-            delayMs,
-            spotlight
-          })
-        } else {
-          await triggerSpotlightImport(filePath)
-        }
-      } catch (error) {
-        console.warn('Failed to run Spotlight follow-up:', error)
-      }
-    })
-  }, delayMs)
-
-  timeout.unref?.()
 }
 
 async function verifyFolderMetadata(folderPath: string): Promise<FolderMetadataVerificationResult> {
@@ -607,6 +349,7 @@ ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData): Promis
   const startedAt = Date.now()
   const keepBackup = true
   const writeDiagnostics = shouldWriteMetadataDiagnostics()
+  const logPath = getMetadataWriteLogPath()
   const before = writeDiagnostics ? await getExifSnapshot(filePath) : undefined
   const fileBefore = writeDiagnostics ? await getFileSnapshot(filePath) : undefined
   let result: { success: boolean; backupPath?: string; error?: string; warning?: string }
@@ -625,8 +368,8 @@ ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData): Promis
   }
 
   if (result.success) {
-    scheduleSpotlightFollowUp(filePath, 0, writeDiagnostics)
-    scheduleSpotlightFollowUp(filePath, 30000, writeDiagnostics)
+    scheduleSpotlightFollowUp(filePath, 0, writeDiagnostics, logPath, app.getVersion())
+    scheduleSpotlightFollowUp(filePath, 30000, writeDiagnostics, logPath, app.getVersion())
   }
 
   if (writeDiagnostics && before) {
@@ -646,7 +389,7 @@ ipcMain.handle('write-exif', async (_, filePath: string, data: ExifData): Promis
         fileAfter,
         durationMs: Date.now() - startedAt,
         result
-      })
+      }, logPath)
     } catch (error) {
       console.warn('Failed to append metadata write log:', error)
     }
@@ -669,6 +412,7 @@ ipcMain.handle('verify-folder-metadata', async (): Promise<FolderMetadataVerific
 
   const startedAt = Date.now()
   const folderPath = result.filePaths[0]
+  const logPath = getMetadataWriteLogPath()
 
   try {
     const verification = await verifyFolderMetadata(folderPath)
@@ -681,7 +425,7 @@ ipcMain.handle('verify-folder-metadata', async (): Promise<FolderMetadataVerific
         appVersion: app.getVersion(),
         durationMs: Date.now() - startedAt,
         ...verification
-      })
+      }, logPath)
     } catch (error) {
       console.warn('Failed to append metadata verification log:', error)
     }
