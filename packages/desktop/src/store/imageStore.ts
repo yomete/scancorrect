@@ -79,7 +79,7 @@ export const useImageStore = create<ImageState>((set, get) => ({
   }),
 
   // Selection
-  selectImage: (path) => set((state) => {
+  selectImage: (path) => set((_state) => {
     // Deselect all others, select only this one
     return { selectedImageIds: new Set([path]) }
   }),

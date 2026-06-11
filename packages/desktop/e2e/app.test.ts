@@ -75,7 +75,7 @@ test.describe('ScanCorrect E2E Tests', () => {
     await window.setViewportSize({ width: 800, height: 600 })
 
     // App should still be functional
-    const supportedText = await page.locator('text=Supported:')
+    const _supportedText = await page.locator('text=Supported:')
     // Either visible or the view has changed, which is fine
     const isStillResponsive = await page.isVisible('body')
     expect(isStillResponsive).toBe(true)

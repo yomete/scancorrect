@@ -14,7 +14,7 @@ interface FieldEditorProps {
 }
 
 export function FieldEditor({
-  field,
+  field: _field,
   label,
   existingValue,
   pendingValue,

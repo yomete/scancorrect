@@ -64,7 +64,7 @@ declare global {
 }
 
 function App() {
-  const { theme } = useTheme();
+  const { theme: _theme } = useTheme();
   const [profiles, setProfiles] = useState<CameraProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string>("");
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);

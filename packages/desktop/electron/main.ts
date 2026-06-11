@@ -484,7 +484,7 @@ if (process.env.NODE_ENV === 'development') {
       electron: path.join(__dirname, '..', 'node_modules', '.bin', 'electron'),
       hardResetMethod: 'exit'
     })
-  } catch (e) {
+  } catch (_e) {
     console.log('Electron reload not available')
   }
 }
