@@ -1,5 +1,9 @@
 # ScanCorrect Enhanced Metadata Feature - Implementation Plan
 
+> **Status as of 2026-06-11: phases below largely shipped (v0.3.2).**
+> Remaining open items are listed in the "Remaining Steps to Complete" section below.
+> New planned work lives in `plans/README.md`.
+
 ## Overview
 
 This document outlines the implementation plan for adding comprehensive metadata editing capabilities to ScanCorrect, including location geocoding, exposure settings, film stock information, and enhanced profile management.
