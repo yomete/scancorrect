@@ -570,11 +570,32 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-    const parsedUrl = new URL(navigationUrl)
-    if (parsedUrl.origin !== 'http://localhost:5173' && parsedUrl.origin !== 'file://') {
+    let parsedUrl: URL
+    try {
+      parsedUrl = new URL(navigationUrl)
+    } catch {
       event.preventDefault()
+      return
+    }
+    const isInternal =
+      parsedUrl.origin === 'http://localhost:5173' || parsedUrl.protocol === 'file:'
+    if (isInternal) return
+    event.preventDefault()
+    if (parsedUrl.protocol === 'https:' || parsedUrl.protocol === 'http:') {
       shell.openExternal(navigationUrl)
     }
+  })
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const { protocol } = new URL(url)
+      if (protocol === 'https:' || protocol === 'http:') {
+        shell.openExternal(url)
+      }
+    } catch {
+      // malformed URL — drop it
+    }
+    return { action: 'deny' }
   })
 }
 
