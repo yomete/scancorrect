@@ -43,7 +43,7 @@
     "electron": "^31.0.2",
     "electron-builder": "^24.13.3",
     "electron-reload": "^2.0.0-alpha.1",
-    "happy-dom": "^15.0.0",
+    "happy-dom": "^20.10.2",
     "msw": "^2.4.0",
     "playwright": "^1.48.0",
     "postcss": "^8.5.6",
