@@ -35,7 +35,31 @@ export default defineConfig({
         'electron/__tests__/**',
         'src/main.tsx',
         'src/vite-env.d.ts'
-      ]
+      ],
+      // Overall coverage is below 10% (main.ts and preload.ts are untested
+      // Electron runtime code). Thresholds are set per-file on the modules
+      // that actually have unit tests so the floor is meaningful and ratchets
+      // up as new tests are added.
+      thresholds: {
+        'electron/exif.ts': {
+          statements: 93,
+          branches: 85,
+          functions: 100,
+          lines: 93,
+        },
+        'electron/geocoding.ts': {
+          statements: 85,
+          branches: 83,
+          functions: 100,
+          lines: 85,
+        },
+        'electron/gpx.ts': {
+          statements: 96,
+          branches: 86,
+          functions: 100,
+          lines: 96,
+        },
+      }
     }
   },
   resolve: {
