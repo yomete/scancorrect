@@ -3,21 +3,13 @@ import * as path from 'path'
 import { ExifTool } from 'exiftool-vendored'
 import { readExifData, initBackupDir } from './exif'
 import { getStore } from './store'
-import {
-  getFinderMetadataSnapshot,
-  hasFinderMetadata,
-  type ExifSnapshot,
-} from './spotlight'
+import { type ExifSnapshot } from './spotlight'
 import { registerProfileHandlers } from './handlers/profiles'
 import { registerExifHandlers } from './handlers/exif-handlers'
 import { registerLocationHandlers } from './handlers/locations'
 import { registerGpxHandlers } from './handlers/gpx-handlers'
 import { registerThumbnailHandlers } from './handlers/thumbnail-handlers'
 import { registerMiscHandlers } from './handlers/misc'
-import type {
-  ExifData,
-  FolderMetadataVerificationFile,
-} from './ipc-types'
 
 // Initialize ExifTool with proper configuration
 const exiftool = new ExifTool({

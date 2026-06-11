@@ -4,8 +4,6 @@ import type {
   ExifData,
   CustomValues,
   ProcessingLogEntry,
-  FinderMetadataSnapshot,
-  FolderMetadataVerificationFile,
   FolderMetadataVerificationResult,
   GeocodingResult,
   SavedLocation,
