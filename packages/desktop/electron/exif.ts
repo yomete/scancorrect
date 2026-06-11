@@ -2,6 +2,7 @@ import { ExifTool, Tags } from 'exiftool-vendored'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import * as crypto from 'crypto'
+import type { ExifData } from './ipc-types'
 
 let backupDir = ''
 
@@ -32,24 +33,7 @@ async function moveFile(src: string, dest: string): Promise<void> {
   }
 }
 
-export interface ExifData {
-  make?: string
-  model?: string
-  lens?: string
-  iso?: number
-  aperture?: number
-  shutterSpeed?: number
-  focalLength?: number
-  exposureComp?: number
-  filmStock?: string
-  location?: {
-    name: string
-    latitude: number
-    longitude: number
-  }
-  dateOriginal?: string // YYYY-MM-DD format
-  dateTimeOriginal?: string // Full ISO timestamp YYYY-MM-DDTHH:mm:ss for GPX matching
-}
+export type { ExifData } from './ipc-types'
 
 export interface WriteResult {
   success: boolean
