@@ -4,7 +4,6 @@ import { describe, it, expect, beforeEach } from 'vitest'
 vi.mock('electron-store')
 
 import { vi } from 'vitest'
-import { getStore, initStore } from '../store'
 
 // Reset the module between tests so storeInstance is cleared
 beforeEach(async () => {
