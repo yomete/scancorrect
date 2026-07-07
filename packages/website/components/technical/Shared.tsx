@@ -9,9 +9,9 @@ import { useState } from 'react';
 import { Icon } from '@iconify/react';
 
 export const PLATFORMS = [
-  { id: 'mac', label: 'macOS', icon: 'mdi:apple' },
-  { id: 'win', label: 'Windows', icon: 'mdi:microsoft-windows' },
-  { id: 'linux', label: 'Linux', icon: 'mdi:linux' },
+  { id: 'mac', label: 'macOS', icon: 'mdi:apple', href: '/download/mac' },
+  { id: 'win', label: 'Windows', icon: 'mdi:microsoft-windows', href: '/download/win' },
+  { id: 'linux', label: 'Linux', icon: 'mdi:linux', href: '/download/linux' },
 ];
 
 export function MonoEyebrow({ children, color }: { children: React.ReactNode; color?: string }) {
@@ -26,25 +26,42 @@ export function MonoEyebrow({ children, color }: { children: React.ReactNode; co
 }
 
 export function DownloadButton({ platform, primary, onClick, active }: {
-  platform: { label: string; icon: string };
+  platform: { label: string; icon: string; href?: string };
   primary?: boolean;
   onClick?: () => void;
   active?: boolean;
 }) {
   const [hover, setHover] = useState(false);
-  return (
-    <button onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{
-        fontFamily: 'var(--mono)', fontSize: 13, letterSpacing: '0.02em',
-        padding: '11px 18px', borderRadius: 8, cursor: 'pointer',
-        display: 'inline-flex', alignItems: 'center', gap: 8,
-        border: primary ? 'none' : '1px solid var(--border)',
-        background: primary ? (hover ? '#2f6fe0' : 'var(--blue)') : (hover ? 'var(--surface-2)' : 'transparent'),
-        color: primary ? '#fff' : 'var(--text)',
-        transition: 'background-color 160ms ease, border-color 160ms ease',
-      }}>
+  const style: React.CSSProperties = {
+    fontFamily: 'var(--mono)', fontSize: 13, letterSpacing: '0.02em',
+    padding: '11px 18px', borderRadius: 8, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', gap: 8,
+    border: primary ? 'none' : '1px solid var(--border)',
+    background: primary ? (hover ? '#2f6fe0' : 'var(--blue)') : (hover ? 'var(--surface-2)' : 'transparent'),
+    color: primary ? '#fff' : 'var(--text)',
+    textDecoration: 'none',
+    transition: 'background-color 160ms ease, border-color 160ms ease',
+  };
+  const content = (
+    <>
       <Icon icon={platform.icon} style={{ fontSize: 16, opacity: primary ? 1 : 0.7 }} />
       {active ? 'downloading…' : platform.label}
+    </>
+  );
+
+  if (platform.href) {
+    return (
+      <a href={platform.href} onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+        style={style}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={style}>
+      {content}
     </button>
   );
 }
