@@ -1,0 +1,30 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Local build output and caches
+release
+dist
+dist-electron
+**/dist
+**/dist-electron
+**/.next
+**/out
+**/coverage
+**/.turbo
+**/.cache
+
+# Desktop packaging artifacts
+*.dmg
+*.zip
+*.exe
+*.AppImage
+*.deb
+*.blockmap
+
+# Local project state
+.vercel
+.env
+.env.*
+*.log
+.DS_Store
