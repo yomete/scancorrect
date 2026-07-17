@@ -140,10 +140,20 @@ export function parseGPX(content: string): GPXTrack {
 /**
  * Match photos to GPX track points based on timestamps
  */
+function wallClockToUtcMs(timestamp: string, offsetMinutes: number): number {
+  if (/(?:Z|[+-]\d{2}:\d{2})$/i.test(timestamp)) {
+    return Date.parse(timestamp)
+  }
+
+  const asUtc = Date.parse(`${timestamp}Z`)
+  return asUtc - offsetMinutes * 60_000
+}
+
 export function matchPhotosToGPX(
   track: GPXTrack,
   images: Array<{ path: string; timestamp: string }>,
-  toleranceSeconds: number = 60
+  toleranceSeconds: number = 60,
+  cameraUtcOffsetMinutes?: number | null
 ): GPXMatchResult[] {
   const results: GPXMatchResult[] = []
 
@@ -157,7 +167,9 @@ export function matchPhotosToGPX(
       continue
     }
 
-    const imageTime = new Date(image.timestamp).getTime()
+    const imageTime = cameraUtcOffsetMinutes == null
+      ? new Date(image.timestamp).getTime()
+      : wallClockToUtcMs(image.timestamp, cameraUtcOffsetMinutes)
 
     if (isNaN(imageTime)) {
       results.push({

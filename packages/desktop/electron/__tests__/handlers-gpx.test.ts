@@ -82,5 +82,15 @@ describe('registerGpxHandlers', () => {
       const result = await ipc.invoke('match-photos-to-gpx', track, [], 30)
       expect(result).toEqual([])
     })
+
+    it('forwards the camera UTC offset', async () => {
+      const track = await ipc.invoke('parse-gpx', GPX_CONTENT) as any
+      const images = [{ path: '/photo.jpg', timestamp: '2024-01-01T21:00:00' }]
+
+      const result = await ipc.invoke('match-photos-to-gpx', track, images, 30, 540) as any[]
+
+      expect(result[0].confidence).toBe('exact')
+      expect(result[0].timeDifferenceSeconds).toBe(0)
+    })
   })
 })

@@ -51,8 +51,9 @@ export function registerGpxHandlers({ ipcMain, getStore, getMainWindow, dialog }
     _,
     track: GPXTrack,
     images: Array<{ path: string; timestamp: string }>,
-    toleranceSeconds: number
+    toleranceSeconds: number,
+    cameraUtcOffsetMinutes?: number | null
   ): Promise<GPXMatchResult[]> => {
-    return matchPhotosToGPX(track, images, toleranceSeconds)
+    return matchPhotosToGPX(track, images, toleranceSeconds, cameraUtcOffsetMinutes)
   })
 }

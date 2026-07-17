@@ -74,7 +74,8 @@ export interface ElectronAPI {
   matchPhotosToGPX: (
     track: GPXTrack,
     images: Array<{ path: string; timestamp: string }>,
-    toleranceSeconds: number
+    toleranceSeconds?: number,
+    cameraUtcOffsetMinutes?: number | null
   ) => Promise<GPXMatchResult[]>
 
   // Mapbox Configuration
@@ -160,8 +161,15 @@ const electronAPI: ElectronAPI = {
   matchPhotosToGPX: (
     track: GPXTrack,
     images: Array<{ path: string; timestamp: string }>,
-    toleranceSeconds: number
-  ) => ipcRenderer.invoke('match-photos-to-gpx', track, images, toleranceSeconds),
+    toleranceSeconds?: number,
+    cameraUtcOffsetMinutes?: number | null
+  ) => ipcRenderer.invoke(
+    'match-photos-to-gpx',
+    track,
+    images,
+    toleranceSeconds,
+    cameraUtcOffsetMinutes
+  ),
 
   // Mapbox Configuration
   getMapboxToken: () => ipcRenderer.invoke('get-mapbox-token'),

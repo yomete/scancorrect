@@ -18,6 +18,7 @@ describe('exif', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'))
     initBackupDir('/tmp/test-backups')
     mockExifTool = {
       read: vi.fn(),
@@ -329,6 +330,49 @@ describe('exif', () => {
       expect(fs.rename).toHaveBeenCalledWith('/test.jpg_original', result.backupPath)
     })
 
+    it('should preserve the original contents of an existing backup', async () => {
+      const files = new Map<string, string>()
+      const filePath = '/test.jpg'
+      const backupPath = getBackupPath(filePath)
+      files.set(filePath, 'MODIFIED')
+      files.set(backupPath, 'ORIGINAL')
+      vi.mocked(mockExifTool.write).mockImplementation(async () => {
+        files.set(`${filePath}_original`, files.get(filePath)!)
+      })
+      vi.mocked(fs.access).mockImplementation(async (target) => {
+        if (!files.has(String(target))) throw new Error('ENOENT')
+      })
+      vi.mocked(fs.unlink).mockImplementation(async (target) => {
+        files.delete(String(target))
+      })
+
+      const result = await writeExifData(mockExifTool, filePath, { make: 'Canon' })
+
+      expect(result.backupPath).toBe(backupPath)
+      expect(files.get(backupPath)).toBe('ORIGINAL')
+    })
+
+    it('should remove the fresh ExifTool backup when an authoritative backup exists', async () => {
+      const files = new Map<string, string>()
+      const filePath = '/test.jpg'
+      const backupPath = getBackupPath(filePath)
+      files.set(filePath, 'MODIFIED')
+      files.set(backupPath, 'ORIGINAL')
+      vi.mocked(mockExifTool.write).mockImplementation(async () => {
+        files.set(`${filePath}_original`, files.get(filePath)!)
+      })
+      vi.mocked(fs.access).mockImplementation(async (target) => {
+        if (!files.has(String(target))) throw new Error('ENOENT')
+      })
+      vi.mocked(fs.unlink).mockImplementation(async (target) => {
+        files.delete(String(target))
+      })
+
+      await writeExifData(mockExifTool, filePath, { make: 'Canon' })
+
+      expect(files.has(`${filePath}_original`)).toBe(false)
+    })
+
     it('should not keep backup when keepBackup is false', async () => {
       vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
 
@@ -364,7 +408,9 @@ describe('exif', () => {
       vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
       vi.mocked(fs.mkdir).mockResolvedValue(undefined)
       vi.mocked(fs.rename).mockRejectedValue(new Error('Permission denied'))
-      vi.mocked(fs.access).mockResolvedValue(undefined)
+      vi.mocked(fs.access)
+        .mockRejectedValueOnce(new Error('ENOENT'))
+        .mockResolvedValueOnce(undefined)
 
       const result = await writeExifData(mockExifTool, '/test.jpg', { make: 'Canon' })
 

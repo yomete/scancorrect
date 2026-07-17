@@ -11,7 +11,32 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    name: Test gate
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Assert tag matches package.json version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(node -p "require('./packages/desktop/package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag v$TAG_VERSION does not match packages/desktop/package.json version $PKG_VERSION"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+        working-directory: packages/desktop
+      - run: npm run test
+        working-directory: packages/desktop
+
   build:
+    needs: test
     name: Build & publish ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
@@ -75,7 +100,20 @@ jobs:
         working-directory: packages/desktop
         run: |
           npm run build
-          npx electron-builder
+          npx electron-builder --publish never
+
+      - name: Assert update manifest exists
+        working-directory: packages/desktop
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then f=release/latest-mac.yml; fi
+          if [ "$RUNNER_OS" = "Windows" ]; then f=release/latest.yml; fi
+          if [ "$RUNNER_OS" = "Linux" ]; then f=release/latest-linux.yml; fi
+          if [ ! -f "$f" ]; then
+            echo "::error::$f was not generated — auto-update would be broken. Failing release."
+            exit 1
+          fi
+          cat "$f"
 
       # Publish each OS's installers straight to the release. Uploading directly
       # (instead of upload-artifact -> download-artifact -> release) avoids the

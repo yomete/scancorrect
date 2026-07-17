@@ -59,8 +59,8 @@ export function registerExifHandlers(deps: ExifHandlerDeps): void {
   ipcMain.handle('read-exif-batch', async (_, filePaths: string[]): Promise<ExifBatchResult> => {
     const entries = await Promise.all(
       filePaths.map(async (filePath) => {
-        assertAbsolutePath(filePath)
         try {
+          assertAbsolutePath(filePath)
           const data = await readExifData(exiftool, filePath)
           const isScanner = isLikelyScannerMetadata(data.make, data.model)
           return [filePath, { data, isScanner }] as const
@@ -167,9 +167,12 @@ export function registerExifHandlers(deps: ExifHandlerDeps): void {
 
   ipcMain.handle('restore-backup', async (_, filePath: string, backupPath: string): Promise<{ success: boolean; error?: string }> => {
     assertAbsolutePath(filePath)
+    assertAbsolutePath(backupPath)
     try {
-      await restoreFromBackup(filePath, backupPath)
-      return { success: true }
+      const ok = await restoreFromBackup(filePath, backupPath)
+      return ok
+        ? { success: true }
+        : { success: false, error: 'Restore failed — the backup file may be missing or unreadable' }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error restoring backup' }
     }

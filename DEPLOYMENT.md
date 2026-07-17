@@ -265,7 +265,7 @@ Before creating a release:
 
 - [ ] Test app locally on your platform
 - [ ] Update version number appropriately (semantic versioning)
-- [ ] Update CHANGELOG.md with changes (optional)
+- [ ] Update CHANGELOG.md before tagging
 - [ ] Commit all changes to main branch
 - [ ] Run `./scripts/create-release.sh`
 - [ ] Wait for GitHub Actions to complete

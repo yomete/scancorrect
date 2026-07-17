@@ -235,6 +235,15 @@ export async function writeExifData(
       const exiftoolBackup = `${filePath}_original`
       const destBackupPath = getBackupPath(filePath)
       await ensureBackupDir()
+      const backupAlreadyExists = await fs.access(destBackupPath).then(() => true, () => false)
+      if (backupAlreadyExists) {
+        try {
+          await fs.unlink(exiftoolBackup)
+        } catch {
+          // best-effort cleanup; the authoritative backup is already in place
+        }
+        return { success: true, backupPath: destBackupPath }
+      }
       try {
         await moveFile(exiftoolBackup, destBackupPath)
         return { success: true, backupPath: destBackupPath }

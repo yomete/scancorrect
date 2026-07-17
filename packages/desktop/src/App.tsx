@@ -495,6 +495,7 @@ function App() {
                   ...img,
                   status: writeResult.success ? "success" : "error",
                   error: writeResult.error,
+                  pendingChanges: writeResult.success ? {} : img.pendingChanges,
                 }
               : img
           )

@@ -25,7 +25,7 @@ vi.mock('electron', () => ({
 }))
 
 // Import after mocks are registered
-import { initAutoUpdater } from '../updater'
+import { _resetUpdateDownloadedForTest, initAutoUpdater, isUpdateDownloaded } from '../updater'
 import { autoUpdater } from 'electron-updater'
 import { app } from 'electron'
 
@@ -47,6 +47,7 @@ describe('initAutoUpdater', () => {
     mockAutoUpdater.autoDownload = false
     mockAutoUpdater.autoInstallOnAppQuit = false
     mockApp.isPackaged = false
+    _resetUpdateDownloadedForTest()
     delete process.env.PORTABLE_EXECUTABLE_DIR
     process.env.NODE_ENV = 'test'
   })
@@ -80,6 +81,24 @@ describe('initAutoUpdater', () => {
     listener({ version: '0.4.0' })
 
     expect(fakeWindow.webContents.send).toHaveBeenCalledWith('update-ready', '0.4.0')
+  })
+
+  it('tracks whether an update has been downloaded', () => {
+    mockApp.isPackaged = true
+    process.env.NODE_ENV = 'production'
+
+    initAutoUpdater(getMainWindow)
+
+    const updateDownloadedCall = mockAutoUpdater.on.mock.calls.find(
+      ([event]: [string]) => event === 'update-downloaded'
+    )
+    expect(updateDownloadedCall).toBeDefined()
+    expect(isUpdateDownloaded()).toBe(false)
+
+    const listener = updateDownloadedCall![1] as (info: { version: string }) => void
+    listener({ version: '0.4.0' })
+
+    expect(isUpdateDownloaded()).toBe(true)
   })
 
   it('does not throw when mainWindow is null on update-downloaded', () => {

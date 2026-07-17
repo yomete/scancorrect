@@ -37,13 +37,13 @@ export default defineConfig({
         'src/vite-env.d.ts'
       ],
       // Overall coverage floor, set ~2 points below measured values
-      // (statements/lines 17.4%, branches 79.1%, functions 52.6% as of
-      // plan 012 merge). Ratchet these up as new tests are added.
+      // (statements/lines 19.5%, branches 80.58%, functions 56.25% as of
+      // plan 022 merge, 2026-07-17). Ratchet these up as new tests are added.
       thresholds: {
-        statements: 15,
-        branches: 77,
-        functions: 50,
-        lines: 15,
+        statements: 17,
+        branches: 78,
+        functions: 54,
+        lines: 17,
       }
     }
   },

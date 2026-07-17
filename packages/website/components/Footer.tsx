@@ -10,6 +10,14 @@ export function Footer() {
             Made by Yomi Eluwande — shooting film, scanning at home, and tired
             of metadata that says "Epson."
           </p>
+          <p className="text-sm mt-4">
+            <a
+              href="/privacy"
+              className="text-gray-500 hover:text-gray-700 underline"
+            >
+              Privacy
+            </a>
+          </p>
         </div>
       </div>
     </footer>

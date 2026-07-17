@@ -12,6 +12,12 @@ interface GPXImportModalProps {
 
 type Step = 'import' | 'configure' | 'results'
 
+const CAMERA_TIMEZONE_OPTIONS = [
+  ...Array.from({ length: 27 }, (_, index) => (index - 12) * 60),
+  330,
+  570,
+].sort((a, b) => a - b)
+
 export function GPXImportModal({
   isOpen,
   onClose,
@@ -23,6 +29,7 @@ export function GPXImportModal({
   const [error, setError] = useState<string | null>(null)
   const [track, setTrack] = useState<GPXTrack | null>(null)
   const [tolerance, setTolerance] = useState(30) // seconds
+  const [cameraOffset, setCameraOffset] = useState<number | null>(null)
   const [matchResults, setMatchResults] = useState<GPXMatchResult[]>([])
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set())
 
@@ -32,6 +39,7 @@ export function GPXImportModal({
     setError(null)
     setTrack(null)
     setTolerance(30)
+    setCameraOffset(null)
     setMatchResults([])
     setSelectedPaths(new Set())
   }
@@ -77,7 +85,8 @@ export function GPXImportModal({
       const results = await window.electronAPI.matchPhotosToGPX(
         track,
         imagesToMatch,
-        tolerance
+        tolerance,
+        cameraOffset
       )
 
       setMatchResults(results)
@@ -270,6 +279,31 @@ export function GPXImportModal({
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   Photos within this time window of a track point will be considered a match.
                 </p>
+              </div>
+
+              <div>
+                <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Camera clock timezone
+                </label>
+                <select
+                  value={cameraOffset ?? ''}
+                  onChange={(e) => setCameraOffset(e.target.value === '' ? null : Number(e.target.value))}
+                  className="w-full p-2 px-3 border border-gray-300 dark:border-gray-600 dark:bg-neutral-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Same as this computer</option>
+                  {CAMERA_TIMEZONE_OPTIONS.map((offset) => {
+                    const sign = offset < 0 ? '−' : '+'
+                    const absoluteOffset = Math.abs(offset)
+                    const hours = Math.floor(absoluteOffset / 60)
+                    const minutes = absoluteOffset % 60
+
+                    return (
+                      <option key={offset} value={offset}>
+                        UTC{sign}{hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}
+                      </option>
+                    )
+                  })}
+                </select>
               </div>
 
               {/* Images to match */}

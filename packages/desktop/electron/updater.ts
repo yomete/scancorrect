@@ -3,6 +3,15 @@ import type { BrowserWindow } from 'electron'
 import { app } from 'electron'
 
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000 // 4 hours
+let updateDownloaded = false
+
+export function isUpdateDownloaded(): boolean {
+  return updateDownloaded
+}
+
+export function _resetUpdateDownloadedForTest(): void {
+  updateDownloaded = false
+}
 
 function isDev(): boolean {
   return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || !app.isPackaged
@@ -16,6 +25,7 @@ export function initAutoUpdater(getMainWindow: () => BrowserWindow | null): void
   autoUpdater.autoInstallOnAppQuit = true
 
   autoUpdater.on('update-downloaded', (info) => {
+    updateDownloaded = true
     const win = getMainWindow()
     if (win) {
       win.webContents.send('update-ready', info.version)

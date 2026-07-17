@@ -23,6 +23,10 @@ const exiftool = new ExifTool({
 
 let mainWindow: BrowserWindow | null = null
 let forceCloseWindow = false
+// True while an app quit is in flight. Preventing the window close (the
+// unsaved-changes guard) aborts the quit, so once the window really closes we
+// must re-issue app.quit() or a macOS quit leaves a windowless running app.
+let isQuitting = false
 
 // Function to check dev mode - only call after app is ready
 function isDev(): boolean {
@@ -152,20 +156,31 @@ function createWindow(): void {
     }
   })
 
-  // Handle close with unsaved changes warning
-  mainWindow.on('close', async (e) => {
+  // Handle close with unsaved changes warning.
+  // e.preventDefault() must run synchronously — Electron evaluates it when the
+  // listener returns at its first await. So: always prevent, then decide
+  // asynchronously and re-close via the forceCloseWindow path.
+  mainWindow.on('close', (e) => {
     if (forceCloseWindow) {
       forceCloseWindow = false
       return
     }
 
-    // Ask renderer if there are unsaved changes
-    const hasUnsavedChanges = await mainWindow?.webContents.executeJavaScript(
-      'window.__hasUnsavedChanges ? window.__hasUnsavedChanges() : false'
-    ).catch(() => false)
+    e.preventDefault()
 
-    if (hasUnsavedChanges) {
-      e.preventDefault()
+    void (async () => {
+      const hasUnsavedChanges = await mainWindow?.webContents.executeJavaScript(
+        'window.__hasUnsavedChanges ? window.__hasUnsavedChanges() : false'
+      ).catch(() => false)
+
+      if (!hasUnsavedChanges) {
+        forceCloseWindow = true
+        mainWindow?.close()
+        return
+      }
+
+      if (!mainWindow || mainWindow.isDestroyed()) return
+
       const { response } = await dialog.showMessageBox(mainWindow!, {
         type: 'warning',
         buttons: ['Save & Close', 'Discard & Close', 'Cancel'],
@@ -177,15 +192,16 @@ function createWindow(): void {
       })
 
       if (response === 0) {
-        // Save & Close - trigger save, then close
         mainWindow?.webContents.send('save-before-close')
       } else if (response === 1) {
-        // Discard & Close
         forceCloseWindow = true
         mainWindow?.close()
       }
-      // response === 2: Cancel - do nothing
-    }
+      else {
+        // Cancel — window stays open (already prevented); drop any quit intent
+        isQuitting = false
+      }
+    })()
   })
 
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
@@ -269,11 +285,17 @@ app.whenReady().then(async () => {
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (process.platform !== 'darwin' || isQuitting) {
     app.quit()
   }
 })
 
-app.on('before-quit', async () => {
+app.on('before-quit', () => {
+  isQuitting = true
+})
+
+// will-quit only fires when the quit actually proceeds — before-quit also runs
+// for quits the close guard later cancels, and exiftool must survive those.
+app.on('will-quit', async () => {
   await exiftool.end()
 })

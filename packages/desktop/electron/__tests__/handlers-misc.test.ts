@@ -1,5 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('../updater', () => ({
+  isUpdateDownloaded: vi.fn(),
+}))
+
+vi.mock('electron-updater', () => ({
+  autoUpdater: { quitAndInstall: vi.fn() },
+}))
+
 import { registerMiscHandlers } from '../handlers/misc'
+import { isUpdateDownloaded } from '../updater'
+import { autoUpdater } from 'electron-updater'
+
+const mockIsUpdateDownloaded = vi.mocked(isUpdateDownloaded)
+const mockQuitAndInstall = vi.mocked(autoUpdater.quitAndInstall)
 
 function makeFakeIpc() {
   const handlers = new Map<string, (...args: unknown[]) => unknown>()
@@ -35,6 +49,7 @@ describe('registerMiscHandlers', () => {
     ipc = makeFakeIpc()
     store = makeStore({})
     forceCloseValue = false
+    mockIsUpdateDownloaded.mockReturnValue(false)
 
     registerMiscHandlers({
       ipcMain: ipc.ipcMain as any,
@@ -117,6 +132,22 @@ describe('registerMiscHandlers', () => {
       await ipc2.invoke('force-close-window')
       expect(forceCloseValue).toBe(true)
       expect(mockClose).toHaveBeenCalled()
+    })
+  })
+
+  describe('install-update-now', () => {
+    it('does not install when an update has not been downloaded', async () => {
+      await ipc.invoke('install-update-now')
+
+      expect(mockQuitAndInstall).not.toHaveBeenCalled()
+    })
+
+    it('installs when an update has been downloaded', async () => {
+      mockIsUpdateDownloaded.mockReturnValue(true)
+
+      await ipc.invoke('install-update-now')
+
+      expect(mockQuitAndInstall).toHaveBeenCalled()
     })
   })
 })

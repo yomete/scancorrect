@@ -210,6 +210,83 @@ describe('gpx', () => {
       ]
     })
 
+    describe('camera UTC offset', () => {
+      const createOffsetTrack = (timestamps: string[]): GPXTrack => ({
+        id: 'offset-track',
+        name: 'Offset Track',
+        importedAt: '2024-01-01T00:00:00Z',
+        points: timestamps.map((timestamp, index) => ({
+          latitude: 35 + index,
+          longitude: 139 + index,
+          timestamp
+        }))
+      })
+
+      it('matches a camera wall clock in a positive offset', () => {
+        const track = createOffsetTrack(['2024-06-15T01:00:10Z'])
+        const images = [{ path: '/tokyo.jpg', timestamp: '2024-06-15T10:00:00' }]
+
+        const results = matchPhotosToGPX(track, images, 60, 540)
+
+        expect(results[0].confidence).toBe('close')
+        expect(results[0].timeDifferenceSeconds).toBe(10)
+      })
+
+      it('keeps the machine-local behavior when no offset is provided', () => {
+        const track = createOffsetTrack(['2024-06-15T01:00:10Z'])
+        const images = [{ path: '/tokyo.jpg', timestamp: '2024-06-15T10:00:00' }]
+
+        // The confidence is machine-TZ-dependent, so only the stable API shape is asserted.
+        expect(matchPhotosToGPX(track, images, 60)).toBeInstanceOf(Array)
+      })
+
+      it('matches a camera wall clock in a negative offset', () => {
+        const track = createOffsetTrack(['2024-06-15T15:00:00Z'])
+        const images = [{ path: '/new-york.jpg', timestamp: '2024-06-15T10:00:00' }]
+
+        const results = matchPhotosToGPX(track, images, 60, -300)
+
+        expect(results[0].confidence).toBe('exact')
+        expect(results[0].timeDifferenceSeconds).toBe(0)
+      })
+
+      it('matches a camera wall clock in a half-hour offset', () => {
+        const track = createOffsetTrack(['2024-06-15T04:30:00Z'])
+        const images = [{ path: '/india.jpg', timestamp: '2024-06-15T10:00:00' }]
+
+        const results = matchPhotosToGPX(track, images, 60, 330)
+
+        expect(results[0].confidence).toBe('exact')
+        expect(results[0].timeDifferenceSeconds).toBe(0)
+      })
+
+      it('uses a fixed offset across a DST boundary', () => {
+        const track = createOffsetTrack([
+          '2024-03-10T09:30:00Z',
+          '2024-03-10T10:30:00Z'
+        ])
+        const images = [
+          { path: '/before.jpg', timestamp: '2024-03-10T01:30:00' },
+          { path: '/after.jpg', timestamp: '2024-03-10T02:30:00' }
+        ]
+
+        const results = matchPhotosToGPX(track, images, 60, -480)
+
+        expect(results.map((result) => result.timeDifferenceSeconds)).toEqual([0, 0])
+        expect(results.map((result) => result.confidence)).toEqual(['exact', 'exact'])
+      })
+
+      it('ignores the offset for an already-zoned timestamp', () => {
+        const track = createOffsetTrack(['2024-06-15T10:00:00Z'])
+        const images = [{ path: '/zoned.jpg', timestamp: '2024-06-15T10:00:00Z' }]
+
+        const results = matchPhotosToGPX(track, images, 60, 540)
+
+        expect(results[0].confidence).toBe('exact')
+        expect(results[0].timeDifferenceSeconds).toBe(0)
+      })
+    })
+
     it('should match exact timestamps with high confidence', () => {
       const track = createTrack()
       const images = [{ path: '/photo1.jpg', timestamp: '2024-01-15T10:00:00Z' }]

@@ -1,6 +1,6 @@
 # ScanCorrect
 
-Desktop app for film photographers to fix EXIF metadata on scanned images. Electron 31 + React 18 + Vite + TypeScript, organized as an npm workspaces monorepo.
+Desktop app for film photographers to fix EXIF metadata on scanned images. Electron 42 + React 18 + Vite + TypeScript, organized as an npm workspaces monorepo.
 
 ## Monorepo layout
 
@@ -8,8 +8,9 @@ Desktop app for film photographers to fix EXIF metadata on scanned images. Elect
 film-exif-editor/
 ├── packages/
 │   ├── desktop/               # Electron app (main deliverable)
-│   │   ├── electron/          # Main process: main.ts, exif.ts, gpx.ts, geocoding.ts,
-│   │   │                      #   mapbox.ts, scanner-detection.ts, preload.ts
+│   │   ├── electron/          # Main process: main.ts + handlers/ (IPC), exif.ts, gpx.ts,
+│   │   │                      #   geocoding.ts, mapbox.ts, thumbnails.ts, updater.ts,
+│   │   │                      #   store.ts, window-state.ts, spotlight.ts, preload.ts
 │   │   ├── src/               # React UI
 │   │   │   ├── store/         # Zustand stores: imageStore.ts, locationStore.ts, settingsStore.ts
 │   │   │   ├── components/    # UI components (Sidebar, ImageGrid, MetadataEditor, etc.)
@@ -50,7 +51,7 @@ All commands run from the **repo root** unless noted. Desktop-specific test comm
 
 **exiftool-vendored**: bundled; no user installation required. Lifecycle managed in `electron/main.ts` — `exiftool.end()` called on app quit.
 
-**electron-store**: persists camera profiles, custom dropdown values, processing log, saved locations, user tier, and thumbnail-cache setting.
+**electron-store**: persists camera profiles, custom dropdown values, processing log, saved locations, thumbnail-cache setting, Mapbox token, window bounds, and last-used profile.
 
 **Backups**: on every EXIF write, backups are stored under `userData/backups` (initialized in `main.ts`). Restore via `restore-backup` IPC handler.
 
@@ -78,6 +79,8 @@ All commands run from the **repo root** unless noted. Desktop-specific test comm
 - Custom value lists for dropdowns (persisted)
 - Dark / light / system theme
 - macOS signed + notarized releases via GitHub Actions
+- Auto-update via `electron-updater` + GitHub Releases (update-ready pill in the Footer)
+- Window-bounds persistence across sessions
 
 ## Roadmap
 

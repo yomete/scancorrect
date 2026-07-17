@@ -82,13 +82,11 @@
       "dist-electron/**/*",
       "build/icon.png",
       "package.json",
-      "node_modules/**/*",
       "!**/*.{map,d.ts}",
       "!**/{test,tests,__tests__,example,examples,doc,docs}/**"
     ],
     "asarUnpack": [
-      "node_modules/exiftool-vendored*/**/*",
-      "node_modules/@photostructure/**/*"
+      "node_modules/exiftool-vendored*/**/*"
     ],
     "mac": {
       "category": "public.app-category.photography",
@@ -97,8 +95,8 @@
       "entitlementsInherit": "build/entitlements.mac.inherit.plist",
       "notarize": true,
       "target": [
-        "dmg",
-        "zip"
+        { "target": "dmg", "arch": ["universal"] },
+        { "target": "zip", "arch": ["universal"] }
       ]
     },
     "win": {

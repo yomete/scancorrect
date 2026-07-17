@@ -126,6 +126,19 @@ describe('registerExifHandlers', () => {
     })
   })
 
+  describe('read-exif-batch', () => {
+    it('returns per-file errors without rejecting the batch', async () => {
+      const ipc = makeFakeIpc()
+      vi.mocked(exifModule.readExifData).mockResolvedValue({ make: 'Leica', model: 'M6' })
+      registerExifHandlers(makeBaseDeps(ipc))
+
+      const result = await ipc.invoke('read-exif-batch', ['relative.jpg', '/absolute/good.jpg']) as any
+
+      expect(result['relative.jpg'].error).toContain('Invalid file path')
+      expect(result['/absolute/good.jpg'].data).toEqual({ make: 'Leica', model: 'M6' })
+    })
+  })
+
   describe('write-exif', () => {
     it('returns success on successful write', async () => {
       const ipc = makeFakeIpc()
@@ -227,11 +240,28 @@ describe('registerExifHandlers', () => {
       expect(result.error).toBe('Restore failed')
     })
 
+    it('returns failure when restoreFromBackup resolves false', async () => {
+      const ipc = makeFakeIpc()
+      vi.mocked(exifModule.restoreFromBackup).mockResolvedValue(false)
+      registerExifHandlers(makeBaseDeps(ipc))
+
+      const result = await ipc.invoke('restore-backup', '/absolute/test.jpg', '/absolute/backup.jpg') as any
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('backup file may be missing or unreadable')
+    })
+
     it('rejects relative filePath', async () => {
       const ipc = makeFakeIpc()
       registerExifHandlers(makeBaseDeps(ipc))
 
       await expect(ipc.invoke('restore-backup', 'relative.jpg', '/absolute/backup.jpg')).rejects.toThrow('Invalid file path')
+    })
+
+    it('rejects relative backupPath', async () => {
+      const ipc = makeFakeIpc()
+      registerExifHandlers(makeBaseDeps(ipc))
+
+      await expect(ipc.invoke('restore-backup', '/absolute/test.jpg', 'relative.jpg')).rejects.toThrow('Invalid file path')
     })
   })
 })
