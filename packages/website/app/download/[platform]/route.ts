@@ -5,7 +5,7 @@ const FALLBACK_URL = "https://github.com/yomete/scancorrect/releases/latest";
 
 const DOWNLOADS = {
   mac: [/\.dmg$/],
-  win: [/^ScanCorrect\.Setup\..*\.exe$/],
+  win: [/^ScanCorrect[.-]Setup[.-].*\.exe$/],
   linux: [/\.AppImage$/],
 };
 
