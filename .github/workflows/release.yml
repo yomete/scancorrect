@@ -109,8 +109,10 @@ jobs:
           npm run build
           npx electron-builder --publish always
 
+      # electron-builder's output dir is ../../release relative to
+      # packages/desktop (see build.directories.output) — i.e. release/ at the
+      # REPO ROOT. This step must run there, not in packages/desktop.
       - name: Assert update manifest exists
-        working-directory: packages/desktop
         shell: bash
         run: |
           if [ "$RUNNER_OS" = "macOS" ]; then f=release/latest-mac.yml; fi
