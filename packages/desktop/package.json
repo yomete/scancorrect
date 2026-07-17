@@ -132,7 +132,8 @@
     "publish": {
       "provider": "github",
       "owner": "yomete",
-      "repo": "scancorrect"
+      "repo": "scancorrect",
+      "releaseType": "release"
     }
   }
 }
