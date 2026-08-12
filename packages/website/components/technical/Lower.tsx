@@ -44,7 +44,10 @@ export function SpecFeatures() {
         borderBottom: "1px solid var(--border)",
       }}
     >
-      <div style={{ maxWidth: 1140, margin: "0 auto", padding: "0 28px" }}>
+      <div
+        className="site-container"
+        style={{ maxWidth: 1140, margin: "0 auto", padding: "0 28px" }}
+      >
         <div
           className="spec-grid"
           style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}
@@ -157,6 +160,7 @@ export function HowItWorks() {
   return (
     <section
       id="how"
+      className="site-container"
       style={{
         maxWidth: 1140,
         margin: "0 auto",
@@ -240,7 +244,10 @@ export function DownloadFooter({
         scrollMarginTop: 60,
       }}
     >
-      <div style={{ maxWidth: 1140, margin: "0 auto", padding: "80px 28px" }}>
+      <div
+        className="site-container"
+        style={{ maxWidth: 1140, margin: "0 auto", padding: "80px 28px" }}
+      >
         <div
           style={{
             display: "flex",

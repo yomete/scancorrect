@@ -17,6 +17,7 @@ export function Nav({ onDownload }: { onDownload: () => void }) {
       }}
     >
       <div
+        className="site-container"
         style={{
           maxWidth: 1140,
           margin: "0 auto",
@@ -45,6 +46,7 @@ export function Nav({ onDownload }: { onDownload: () => void }) {
             scancorrect
           </span>
           <span
+            className="nav-badge"
             style={{
               fontFamily: "var(--mono)",
               fontSize: 11,
@@ -57,14 +59,19 @@ export function Nav({ onDownload }: { onDownload: () => void }) {
             v1.0
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
+        <div
+          className="nav-links"
+          style={{ display: "flex", alignItems: "center", gap: 22 }}
+        >
           <a
             href="#how"
+            className="nav-how"
             style={{
               fontFamily: "var(--mono)",
               fontSize: 13,
               color: "var(--muted)",
               textDecoration: "none",
+              whiteSpace: "nowrap",
             }}
           >
             how it works
@@ -73,6 +80,7 @@ export function Nav({ onDownload }: { onDownload: () => void }) {
             href="https://github.com/yomete/film-exif-editor"
             target="_blank"
             rel="noreferrer"
+            aria-label="Source on GitHub"
             style={{
               fontFamily: "var(--mono)",
               fontSize: 13,
@@ -84,7 +92,7 @@ export function Nav({ onDownload }: { onDownload: () => void }) {
             }}
           >
             <Icon icon="mdi:github" style={{ fontSize: 16 }} />
-            source
+            <span className="nav-source-label">source</span>
           </a>
           <DownloadButton
             platform={{ label: "Download", icon: "mdi:tray-arrow-down" }}
@@ -125,7 +133,7 @@ export function Hero({
         }}
       />
       <div
-        className="hero-grid"
+        className="hero-grid site-container"
         style={{
           position: "relative",
           maxWidth: 1140,
@@ -183,6 +191,7 @@ export function Hero({
           </p>
 
           <div
+            className="hero-ctas"
             style={{
               display: "flex",
               gap: 10,
@@ -212,6 +221,7 @@ export function AppWindow() {
   const thumbs = Array.from({ length: 8 });
   return (
     <section
+      className="site-container"
       style={{ maxWidth: 1140, margin: "0 auto", padding: "24px 28px 96px" }}
     >
       <div
@@ -278,17 +288,24 @@ export function AppWindow() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "6px 8px",
             padding: "9px 16px",
             borderBottom: "1px solid #e5e7eb",
             background: "#fff",
           }}
         >
-          <span style={{ fontSize: 13, color: "#6b7280" }}>
+          <span style={{ fontSize: 13, color: "#6b7280", whiteSpace: "nowrap" }}>
             8 images loaded
           </span>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
             <span
-              style={{ fontSize: 13, color: "#6b7280", padding: "6px 12px" }}
+              style={{
+                fontSize: 13,
+                color: "#6b7280",
+                padding: "6px 12px",
+                whiteSpace: "nowrap",
+              }}
             >
               Discard All
             </span>
@@ -300,21 +317,24 @@ export function AppWindow() {
                 background: "#3b82f6",
                 padding: "6px 13px",
                 borderRadius: 6,
+                whiteSpace: "nowrap",
               }}
             >
               Save Changes (8)
             </span>
           </div>
         </div>
-        <div style={{ display: "flex", minHeight: 300 }}>
+        <div className="app-body" style={{ display: "flex", minHeight: 300 }}>
           {/* grid */}
           <div
+            className="app-grid"
             style={{
               flex: 1,
+              minWidth: 0,
               padding: 16,
               background: "#f3f4f6",
               display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
               gap: 12,
               alignContent: "start",
             }}
@@ -384,8 +404,10 @@ export function AppWindow() {
           </div>
           {/* sidebar */}
           <div
+            className="app-sidebar"
             style={{
               width: 248,
+              flexShrink: 0,
               borderLeft: "1px solid #e5e7eb",
               background: "#fff",
               padding: 16,

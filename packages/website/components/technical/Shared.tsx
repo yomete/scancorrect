@@ -39,7 +39,7 @@ export function DownloadButton({ platform, primary, onClick, active }: {
     border: primary ? 'none' : '1px solid var(--border)',
     background: primary ? (hover ? '#2f6fe0' : 'var(--blue)') : (hover ? 'var(--surface-2)' : 'transparent'),
     color: primary ? '#fff' : 'var(--text)',
-    textDecoration: 'none',
+    textDecoration: 'none', whiteSpace: 'nowrap',
     transition: 'background-color 160ms ease, border-color 160ms ease',
   };
   const content = (
@@ -52,7 +52,7 @@ export function DownloadButton({ platform, primary, onClick, active }: {
   if (platform.href) {
     return (
       <a href={platform.href} onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-        style={style}>
+        className="dl-btn" style={style}>
         {content}
       </a>
     );
@@ -60,7 +60,7 @@ export function DownloadButton({ platform, primary, onClick, active }: {
 
   return (
     <button onClick={onClick} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={style}>
+      className="dl-btn" style={style}>
       {content}
     </button>
   );

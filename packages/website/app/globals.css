@@ -32,6 +32,14 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Any stray horizontal overflow would let touch devices pan the page
+     sideways (which also fights the compare-slider drag). Clip instead of
+     hidden so position: sticky keeps working. */
+  html,
+  body {
+    overflow-x: clip;
+  }
+
   /* Dark canvas powers the homepage; the guides pages cover it with their own
      bg-white wrapper, so their text color (inherited #1a1a1a) is unchanged. */
   body {
@@ -64,5 +72,74 @@
   .spec-cell,
   .step-cell {
     border-left: none !important;
+  }
+  .spec-cell {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .spec-cell + .spec-cell {
+    border-top: 1px solid var(--border);
+  }
+  .steps-grid {
+    gap: 32px !important;
+  }
+  .step-cell {
+    padding: 0 !important;
+  }
+}
+
+/* Stack the app-window mock: fixed 248px sidebar + 4-up thumb grid can't fit
+   a phone; without this the whole page gains horizontal overflow. */
+@media (max-width: 720px) {
+  .app-body {
+    flex-direction: column !important;
+  }
+  .app-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .app-sidebar {
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid #e5e7eb;
+  }
+}
+
+/* Phone-width tuning: tighter gutters, compact nav, stacked compare card. */
+@media (max-width: 640px) {
+  .site-container {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+  .nav-links {
+    gap: 14px !important;
+  }
+  .nav-how,
+  .nav-source-label {
+    display: none !important;
+  }
+  .dl-btn {
+    padding: 10px 14px !important;
+  }
+  .hero-ctas {
+    gap: 8px !important;
+  }
+  .reveal-card {
+    height: 500px !important;
+  }
+  .face-root {
+    flex-direction: column !important;
+  }
+  .face-photo {
+    width: 100% !important;
+    height: 170px !important;
+  }
+  .face-meta {
+    padding: 16px 18px !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .nav-badge {
+    display: none !important;
   }
 }
