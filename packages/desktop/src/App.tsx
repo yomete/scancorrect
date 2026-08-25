@@ -326,6 +326,7 @@ function App() {
       return {
         ...image,
         existingExif: result.data,
+        isScanner: result.isScanner,
         pendingChanges,
       };
     });

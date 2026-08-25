@@ -34,8 +34,6 @@ const FIELD_TYPES: Partial<Record<keyof ExifData, "text" | "number" | "date">> =
   dateOriginal: "date",
 };
 
-const SCANNER_MAKES = ["EPSON", "NIKON", "PLUSTEK", "REFLECTA", "CANON", "MICROTEK", "PACIFIC IMAGE"];
-
 export function SingleImageEditor({
   image,
   onUpdatePendingChanges,
@@ -45,10 +43,7 @@ export function SingleImageEditor({
   const existingExif = image.existingExif || {};
   const pendingChanges = image.pendingChanges || {};
 
-  const isScanner = useMemo(() => {
-    const make = (existingExif.make || "").toUpperCase();
-    return SCANNER_MAKES.some((s) => make.includes(s));
-  }, [existingExif.make]);
+  const isScanner = Boolean(image.isScanner);
 
   const populatedFields = useMemo(() => {
     const fields = new Set<keyof ExifData>();

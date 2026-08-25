@@ -61,35 +61,6 @@ export function ImageGrid({
     return !!image.pendingChanges && Object.keys(image.pendingChanges).length > 0;
   };
 
-  // Check if an image has scanner metadata
-  const hasScannerMetadata = (image: ImageFile): boolean => {
-    const SCANNER_BRANDS = [
-      "epson",
-      "nikon",
-      "plustek",
-      "canon",
-      "microtek",
-      "pacific image",
-      "reflecta",
-      "braun",
-      "minolta",
-      "polaroid",
-      "imacon",
-      "hasselblad",
-      "pakon",
-      "frontier",
-      "noritsu",
-      "sp-3000",
-      "digitizer",
-    ];
-
-    const make = image.existingExif?.make?.toLowerCase() || "";
-    const model = image.existingExif?.model?.toLowerCase() || "";
-    const makeModel = `${make} ${model}`;
-
-    return SCANNER_BRANDS.some((brand) => makeModel.includes(brand));
-  };
-
   if (images.length === 0) {
     return null;
   }
@@ -138,7 +109,7 @@ export function ImageGrid({
               selected={selectedIds.has(image.path)}
               onSelect={(selected) => handleImageSelect(image, selected)}
               onClick={() => onImageClick(image)}
-              showScannerWarning={hasScannerMetadata(image)}
+              showScannerWarning={!!image.isScanner}
               hasPendingChanges={hasPendingChanges(image)}
             />
           ))}

@@ -62,27 +62,6 @@ export const FILM_FORMATS: readonly FilmFormat[] = [
   { name: 'Large Format 4x5', cropFactor: 0.27 },
 ] as const
 
-// Known scanner brands for detecting scanner metadata
-export const SCANNER_BRANDS = [
-  'epson',
-  'nikon', // Nikon scanners (Coolscan)
-  'plustek',
-  'canon', // Canon scanners (not cameras - detected by model patterns)
-  'microtek',
-  'pacific image',
-  'reflecta',
-  'braun',
-  'minolta', // Dimage scanners
-  'polaroid', // SprintScan
-  'imacon',
-  'hasselblad', // Flextight scanners
-  'pakon',
-  'frontier', // Fuji Frontier
-  'noritsu',
-  'sp-3000',
-  'digitizer',
-] as const
-
 // Common film stocks for suggestions
 export const COMMON_FILM_STOCKS = [
   // Color Negative

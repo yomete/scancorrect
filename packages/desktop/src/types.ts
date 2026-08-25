@@ -26,6 +26,8 @@ export interface ImageFile {
   path: string
   filename: string
   existingExif?: ExifData
+  // Set from the read: the main process owns the scanner-brand list.
+  isScanner?: boolean
   pendingChanges?: ExifData
   mergeDecisions?: MergeDecision[]
   selected: boolean
