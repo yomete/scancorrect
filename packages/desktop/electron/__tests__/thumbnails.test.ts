@@ -15,9 +15,11 @@ vi.mock('electron', () => ({
 import { nativeImage } from 'electron'
 import {
   getThumbnail,
+  getCacheKey,
   THUMBNAIL_CACHE_DIR,
 } from '../thumbnails'
 
+// Path-only hash: still the key for a file that cannot be stat'd.
 function fileHash(filePath: string): string {
   return crypto.createHash('sha256').update(filePath).digest('hex')
 }
@@ -76,14 +78,41 @@ describe('thumbnails', () => {
       }
     })
 
+    it('re-extracts when the file has changed on disk', async () => {
+      const first = Buffer.from('old-preview')
+      const second = Buffer.from('new-preview')
+      const exiftool = { extractBinaryTagToBuffer: vi.fn().mockResolvedValue(first) } as any
+      const filePath = path.join(tmpDir, 'rescanned.jpg')
+      fs.writeFileSync(filePath, 'original scan')
+      const firstKey = getCacheKey(filePath)
+
+      try {
+        const a = await getThumbnail(filePath, exiftool, { cacheEnabled: true })
+        expect(a).toBe(`data:image/jpeg;base64,${first.toString('base64')}`)
+
+        // the frame is re-scanned: same path, different bytes
+        fs.writeFileSync(filePath, 'a completely different scan, longer than before')
+        expect(getCacheKey(filePath)).not.toBe(firstKey)
+
+        exiftool.extractBinaryTagToBuffer.mockResolvedValue(second)
+        const b = await getThumbnail(filePath, exiftool, { cacheEnabled: true })
+        expect(b).toBe(`data:image/jpeg;base64,${second.toString('base64')}`)
+        expect(exiftool.extractBinaryTagToBuffer).toHaveBeenCalledTimes(2)
+      } finally {
+        for (const k of [firstKey, getCacheKey(filePath)]) {
+          try { fs.unlinkSync(path.join(THUMBNAIL_CACHE_DIR, `${k}.jpg`)) } catch { /* ok */ }
+        }
+        try { fs.unlinkSync(filePath) } catch { /* ok */ }
+      }
+    })
+
     it('extracts and writes cache on miss', async () => {
       const jpegBuf = Buffer.from('newthumb')
       const exiftool = { extractBinaryTagToBuffer: vi.fn().mockResolvedValue(jpegBuf) } as any
       const filePath = path.join(tmpDir, 'miss.jpg')
       fs.writeFileSync(filePath, 'dummy')
 
-      const hash = fileHash(filePath)
-      const cacheFile = path.join(THUMBNAIL_CACHE_DIR, `${hash}.jpg`)
+      const cacheFile = path.join(THUMBNAIL_CACHE_DIR, `${getCacheKey(filePath)}.jpg`)
 
       // Ensure no pre-existing cache
       try { fs.unlinkSync(cacheFile) } catch { /* ok */ }

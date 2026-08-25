@@ -22,6 +22,19 @@ export function getFilePathHash(filePath: string): string {
   return crypto.createHash('sha256').update(filePath).digest('hex')
 }
 
+// The cache key has to change when the file does, or a re-scanned frame keeps
+// its old preview forever. Size and mtime are enough and cost one stat.
+export function getCacheKey(filePath: string): string {
+  let stamp = ''
+  try {
+    const stat = fs.statSync(filePath)
+    stamp = `:${stat.size}:${stat.mtimeMs}`
+  } catch {
+    // unreadable — fall back to the path alone; the extract will fail anyway
+  }
+  return crypto.createHash('sha256').update(`${filePath}${stamp}`).digest('hex')
+}
+
 // Remove legacy .txt cache files left by the old renderer-side caching.
 export function removeLegacyCacheFiles(): void {
   try {
@@ -128,7 +141,7 @@ export async function getThumbnail(
   exiftool: ExifTool,
   { cacheEnabled }: GetThumbnailOptions
 ): Promise<string | null> {
-  const hash = getFilePathHash(filePath)
+  const hash = getCacheKey(filePath)
   const cachePath = path.join(THUMBNAIL_CACHE_DIR, `${hash}.jpg`)
 
   // Cache hit
