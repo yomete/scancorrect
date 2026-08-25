@@ -145,6 +145,13 @@ export function ImageCard({
           />
         </label>
         <div className="flex items-center gap-1.5">
+          {hasPendingChanges && (
+            <span
+              title="Unsaved changes"
+              aria-label="Unsaved changes"
+              className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400"
+            />
+          )}
           {showScannerWarning && (
             <div className="group relative">
               <Icon
