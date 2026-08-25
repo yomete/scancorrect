@@ -169,6 +169,13 @@ export async function writeExifData(
   keepBackup: boolean = true
 ): Promise<WriteResult> {
   try {
+    // A field added from the sidebar with nothing typed into it arrives as an
+    // empty string. It is not a value the user chose, and writing it either
+    // blanks a real tag or fails outright on the numeric ones, so drop it.
+    data = Object.fromEntries(
+      Object.entries(data).filter(([, value]) => value !== '')
+    ) as ExifData
+
     const tags: Record<string, unknown> = {}
 
     // Camera info

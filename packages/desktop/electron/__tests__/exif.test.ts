@@ -177,6 +177,21 @@ describe('exif', () => {
   })
 
   describe('writeExifData', () => {
+    it('should not write a field left blank in the sidebar', async () => {
+      vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
+
+      // What an added-but-untouched field looks like by the time it gets here
+      const data = { make: 'Nikon', lens: '', iso: '' } as unknown as ExifData
+
+      const result = await writeExifData(mockExifTool, '/test.jpg', data)
+
+      expect(result.success).toBe(true)
+      const written = vi.mocked(mockExifTool.write).mock.calls[0][1] as Record<string, unknown>
+      expect(written).toHaveProperty('Make', 'Nikon')
+      expect(written).not.toHaveProperty('LensModel')
+      expect(written).not.toHaveProperty('ISO')
+    })
+
     it('should write camera info', async () => {
       vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
 
