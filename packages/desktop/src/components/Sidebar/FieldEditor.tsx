@@ -25,7 +25,10 @@ export function FieldEditor({
   type = "text",
 }: FieldEditorProps) {
   const currentValue = pendingValue !== undefined ? pendingValue : existingValue;
-  const hasChanged = pendingValue !== undefined && pendingValue !== existingValue;
+  // A value edited and then typed back to match the file is still a pending
+  // change, and still gets written — so it still needs a way back.
+  const hasPendingChange = pendingValue !== undefined;
+  const hasChanged = hasPendingChange && pendingValue !== existingValue;
   const displayExisting = existingValue !== undefined ? String(existingValue) : "";
   const displayPending = pendingValue !== undefined ? String(pendingValue) : "";
 
@@ -93,7 +96,7 @@ export function FieldEditor({
           />
         )}
 
-        {hasChanged && (
+        {hasPendingChange && (
           <button
             type="button"
             onClick={onRestore}
