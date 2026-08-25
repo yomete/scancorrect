@@ -161,7 +161,7 @@ export function MultiImageEditor({
             {field === "dateOriginal" && (
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 <Icon icon="mdi:information-outline" className="w-3 h-3 inline mr-1" />
-                Date will propagate to all selected images (sorted by filename).
+                The same date is set on all {images.length} selected images.
               </p>
             )}
           </div>
