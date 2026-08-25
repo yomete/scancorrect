@@ -106,7 +106,9 @@ export function MultiImageEditor({
       }
     }
     const paths = images.map((img) => img.path);
-    onUpdatePendingChanges(paths, { [field]: defaultValue || "" });
+    onUpdatePendingChanges(paths, {
+      [field]: defaultValue === undefined ? "" : defaultValue,
+    });
   };
 
   return (

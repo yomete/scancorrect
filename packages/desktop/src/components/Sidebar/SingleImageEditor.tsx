@@ -103,7 +103,10 @@ export function SingleImageEditor({
         else if (f === "filmStock") defaultValue = d.filmStock;
       }
     }
-    onUpdatePendingChanges(image.path, { ...pendingChanges, [field]: defaultValue || "" });
+    onUpdatePendingChanges(image.path, {
+      ...pendingChanges,
+      [field]: defaultValue === undefined ? "" : defaultValue,
+    });
   };
 
   const isScannerReplaced = (field: keyof ExifData) => {
