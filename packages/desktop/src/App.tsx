@@ -311,7 +311,11 @@ function App() {
     const updatedImages = newImages.map((image) => {
       const result = batchResult[image.path];
       if (!result || "error" in result) {
-        return { ...image, error: result?.error ?? "Unknown error reading EXIF data" };
+        return {
+          ...image,
+          status: "error" as const,
+          error: result?.error ?? "Unknown error reading EXIF data",
+        };
       }
 
       // Start with profile defaults as pending changes
