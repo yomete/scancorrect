@@ -415,8 +415,12 @@ function App() {
       prev.map((img) => {
         if (!selectedImageIds.has(img.path)) return img;
 
-        // Skip if image already has location and we're not overwriting
-        if (!overwriteExisting && img.existingExif?.location) {
+        // Skip if the image already has a location and we're not overwriting.
+        // A location applied but not yet written counts too — otherwise Skip
+        // Existing silently overwrites everything a profile default just set.
+        const alreadyHasLocation =
+          img.pendingChanges?.location ?? img.existingExif?.location;
+        if (!overwriteExisting && alreadyHasLocation) {
           return img;
         }
 
@@ -431,10 +435,11 @@ function App() {
     );
   };
 
-  // Check if any selected images have existing location data
+  // Check if any selected images already carry a location — on the file, or
+  // applied and not yet written.
   const hasLocationConflicts = Array.from(selectedImageIds).some((id) => {
     const image = images.find((img) => img.path === id);
-    return image?.existingExif?.location;
+    return Boolean(image?.pendingChanges?.location ?? image?.existingExif?.location);
   });
 
   const handleApplyDefaults = async () => {
