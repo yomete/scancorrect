@@ -637,6 +637,13 @@ function App() {
                 <span className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
                   {images.length} {images.length === 1 ? "image" : "images"} loaded
                 </span>
+                <button
+                  onClick={handleFileSelect}
+                  disabled={isProcessing}
+                  className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  + Add files
+                </button>
               </div>
 
               <div className="flex items-center gap-3">
