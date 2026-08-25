@@ -43,9 +43,13 @@ export function ProfileDropdown({
     setShowDropdown(false);
   };
 
-  const handleProfileDelete = (e: React.MouseEvent, profileId: string) => {
+  const handleProfileDelete = (e: React.MouseEvent, profile: CameraProfile) => {
     e.stopPropagation();
-    onProfileDelete(profileId);
+    const confirmed = window.confirm(
+      `Delete the camera profile "${profile.name}"? This cannot be undone.`
+    );
+    if (!confirmed) return;
+    onProfileDelete(profile.id);
   };
 
   const handleProfileEdit = (e: React.MouseEvent, profile: CameraProfile) => {
@@ -106,7 +110,7 @@ export function ProfileDropdown({
                     )}
                     <button
                       className="text-gray-400 dark:text-gray-500 p-1 rounded hover:text-red-500 dark:hover:text-red-400 transition-colors text-sm"
-                      onClick={(e) => handleProfileDelete(e, profile.id)}
+                      onClick={(e) => handleProfileDelete(e, profile)}
                       title="Delete profile"
                     >
                       <Icon icon="material-symbols:delete" />

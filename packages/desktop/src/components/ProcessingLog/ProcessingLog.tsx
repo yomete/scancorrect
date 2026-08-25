@@ -23,6 +23,14 @@ export function ProcessingLog({
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
+  const handleClear = () => {
+    const confirmed = window.confirm(
+      `Clear all ${entries.length} ${entries.length === 1 ? "entry" : "entries"} from the processing history? ` +
+        `The backups themselves are kept, but nothing will point at them. This cannot be undone.`
+    );
+    if (confirmed) onClear();
+  };
+
   const successCount = entries.filter((e) => e.success).length;
   const errorCount = entries.filter((e) => !e.success).length;
 
@@ -128,7 +136,7 @@ export function ProcessingLog({
         {entries.length > 0 && (
           <div className="flex-shrink-0 px-4 py-3 border-t border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800">
             <button
-              onClick={onClear}
+              onClick={handleClear}
               className="
                 w-full flex items-center justify-center gap-2 px-4 py-2.5
                 text-sm font-medium
