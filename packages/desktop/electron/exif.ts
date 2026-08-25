@@ -46,6 +46,7 @@ export interface WriteResult {
 // These tags are supported by ExifTool but not typed in the library
 interface ExtendedTags extends Tags {
   ExposureBiasValue?: number
+  Error?: string
 }
 
 /**
@@ -56,6 +57,14 @@ export async function readExifData(
   filePath: string
 ): Promise<ExifData> {
   const tags = await exiftool.read(filePath) as ExtendedTags
+
+  // exiftool resolves rather than rejecting for a file it cannot make sense of
+  // — an empty or truncated frame comes back as a tag set carrying an Error.
+  // Nothing downstream looks at that, so the file would load as if it were
+  // fine. Turn it into the failure the callers already handle.
+  if (tags.Error) {
+    throw new Error(String(tags.Error))
+  }
 
   const exifData: ExifData = {}
 

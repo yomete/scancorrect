@@ -176,6 +176,22 @@ describe('exif', () => {
     })
   })
 
+  describe('readExifData — unreadable files', () => {
+    it('throws when exiftool reports an Error tag', async () => {
+      // exiftool resolves for an empty file, with the failure in a tag
+      vi.mocked(mockExifTool.read).mockResolvedValue({ Error: 'File is empty' } as never)
+
+      await expect(readExifData(mockExifTool, '/empty.jpg')).rejects.toThrow('File is empty')
+    })
+
+    it('still reads a file that only carries a Warning', async () => {
+      vi.mocked(mockExifTool.read).mockResolvedValue({ Warning: 'Odd padding', Make: 'Nikon' } as never)
+
+      const data = await readExifData(mockExifTool, '/odd.jpg')
+      expect(data.make).toBe('Nikon')
+    })
+  })
+
   describe('writeExifData', () => {
     it('should not write a field left blank in the sidebar', async () => {
       vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
