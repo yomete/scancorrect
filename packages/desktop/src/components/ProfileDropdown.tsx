@@ -10,6 +10,7 @@ interface ProfileDropdownProps {
   onProfileSelect: (profileId: string) => void;
   onProfileDelete: (profileId: string) => void;
   onProfileEdit?: (profile: CameraProfile) => void;
+  disabled?: boolean;
 }
 
 export function ProfileDropdown({
@@ -18,6 +19,7 @@ export function ProfileDropdown({
   onProfileSelect,
   onProfileDelete,
   onProfileEdit,
+  disabled = false,
 }: ProfileDropdownProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -63,6 +65,7 @@ export function ProfileDropdown({
       <button
         className="text-gray-500 dark:text-gray-400 text-lg p-2 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-600 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center justify-center w-8 h-8"
         onClick={() => setShowDropdown(!showDropdown)}
+        disabled={disabled}
         title="Switch camera profile"
       >
         ⋯

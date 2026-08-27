@@ -12,6 +12,8 @@ interface FooterProps {
   onProfileSelect: (profileId: string) => void;
   onProfileDelete: (profileId: string) => void;
   onProfileEdit?: (profile: CameraProfile) => void;
+  /** Set while a write is running: changing profiles mid-batch is ambiguous. */
+  disabled?: boolean;
 }
 
 export function Footer({
@@ -21,6 +23,7 @@ export function Footer({
   onProfileSelect,
   onProfileDelete,
   onProfileEdit,
+  disabled = false,
 }: FooterProps) {
   const currentProfile = profiles.find((p) => p.id === selectedProfile);
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
@@ -39,6 +42,7 @@ export function Footer({
         <button
           className="text-white w-10 h-10 rounded-md text-lg font-bold flex items-center justify-center transition-[background-color,transform] active:scale-[0.96] flex-shrink-0 border border-neutral-600 dark:border-neutral-600 hover:bg-gray-100 dark:hover:bg-neutral-600"
           onClick={onAddProfile}
+          disabled={disabled}
           title="Add new camera profile"
         >
           <Icon
@@ -73,6 +77,7 @@ export function Footer({
         <ThemeSwitcher />
 
         <ProfileDropdown
+          disabled={disabled}
           profiles={profiles}
           selectedProfile={selectedProfile}
           onProfileSelect={onProfileSelect}

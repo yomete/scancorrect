@@ -544,11 +544,16 @@ function App() {
     const profile = profiles.find((p) => p.id === selectedProfile);
     const results: ProcessingLogEntry[] = [];
 
-    for (const image of images) {
-      if (!image.pendingChanges || Object.keys(image.pendingChanges).length === 0) {
-        continue;
-      }
+    // Decide the batch once, up front. The loop already closed over this
+    // render's array, but saying so plainly means a later edit cannot quietly
+    // join a write that is already running — and it is what the loop should
+    // guarantee, not something to infer from how the closure happens to work.
+    const batch = images.filter(
+      (image): image is ImageFile & { pendingChanges: ExifData } =>
+        image.pendingChanges !== undefined && Object.keys(image.pendingChanges).length > 0
+    );
 
+    for (const image of batch) {
       try {
         const writeResult = await window.electronAPI.writeExif(
           image.path,
@@ -632,10 +637,25 @@ function App() {
     setProcessingLog((prev) => [...results, ...prev]);
     setIsProcessing(false);
 
-    // If save was triggered by close dialog, close window now
+    const failed = results.filter((entry) => !entry.success);
+
+    // If the save came from the close dialog, only close when it worked.
+    // Closing on failure took the app away before the user could see that
+    // nothing had been saved, leaving the log as the only record.
     if (saveAndCloseRef.current) {
       saveAndCloseRef.current = false;
-      window.electronAPI.forceCloseWindow();
+      if (failed.length === 0) {
+        window.electronAPI.forceCloseWindow();
+      } else {
+        alert(
+          `${failed.length} of ${results.length} ${results.length === 1 ? "image" : "images"} could not be saved, so the window has stayed open.\n\n` +
+            failed
+              .slice(0, 5)
+              .map((entry) => `${entry.filename}: ${entry.error ?? "unknown error"}`)
+              .join("\n") +
+            (failed.length > 5 ? `\n…and ${failed.length - 5} more.` : "")
+        );
+      }
     }
   }, [images, profiles, selectedProfile]);
 
@@ -740,7 +760,8 @@ function App() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleClearImages}
-                  className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 flex items-center gap-1"
+                  disabled={isProcessing}
+                  className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   ← Back
                 </button>
@@ -825,6 +846,7 @@ function App() {
       </main>
 
       <Footer
+        disabled={isProcessing}
         profiles={profiles}
         selectedProfile={selectedProfile}
         onAddProfile={() => setIsCreatingProfile(true)}
