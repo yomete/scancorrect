@@ -10,10 +10,50 @@ export function initBackupDir(dir: string): void {
   backupDir = dir
 }
 
+// How many backups to keep per file: the original the frame arrived as, plus
+// this many of the most recent writes. The original is never pruned — it is
+// the one a user is most likely to want back, and it is the only one that
+// predates anything this app did.
+export const RECENT_BACKUPS_KEPT = 4
+
+function backupHash(originalFilePath: string): string {
+  return crypto.createHash('sha256').update(originalFilePath).digest('hex')
+}
+
+/** The untouched original: the backup taken the first time this file was written. */
 export function getBackupPath(originalFilePath: string): string {
-  const hash = crypto.createHash('sha256').update(originalFilePath).digest('hex')
   const ext = path.extname(originalFilePath)
-  return path.join(backupDir, `${hash}${ext}`)
+  return path.join(backupDir, `${backupHash(originalFilePath)}${ext}`)
+}
+
+/** A backup of the file as it stood before this particular write. */
+export function getDatedBackupPath(originalFilePath: string, at = new Date()): string {
+  const ext = path.extname(originalFilePath)
+  const stamp = at.toISOString().replace(/[:.]/g, '-')
+  return path.join(backupDir, `${backupHash(originalFilePath)}--${stamp}${ext}`)
+}
+
+/**
+ * Keep the original plus the most recent RECENT_BACKUPS_KEPT dated backups for
+ * this file, and delete the rest. Without this a per-write backup grows without
+ * limit — a roll of TIFFs saved a few times over would fill a disk quietly.
+ */
+export async function pruneBackups(originalFilePath: string): Promise<void> {
+  const prefix = `${backupHash(originalFilePath)}--`
+  try {
+    const entries = await fs.readdir(backupDir)
+    const dated = entries.filter((name) => name.startsWith(prefix)).sort()
+    const doomed = dated.slice(0, Math.max(0, dated.length - RECENT_BACKUPS_KEPT))
+    for (const name of doomed) {
+      try {
+        await fs.unlink(path.join(backupDir, name))
+      } catch {
+        // best-effort; a backup we could not remove is not worth failing a write
+      }
+    }
+  } catch {
+    // the directory may not exist yet on the very first write
+  }
 }
 
 async function ensureBackupDir(): Promise<void> {
@@ -251,19 +291,16 @@ export async function writeExifData(
 
     if (keepBackup) {
       const exiftoolBackup = `${filePath}_original`
-      const destBackupPath = getBackupPath(filePath)
+      const originalBackupPath = getBackupPath(filePath)
       await ensureBackupDir()
-      const backupAlreadyExists = await fs.access(destBackupPath).then(() => true, () => false)
-      if (backupAlreadyExists) {
-        try {
-          await fs.unlink(exiftoolBackup)
-        } catch {
-          // best-effort cleanup; the authoritative backup is already in place
-        }
-        return { success: true, backupPath: destBackupPath }
-      }
+      // The first write keeps the original under its plain name; every write
+      // after that gets its own dated backup, so undoing one entry in the
+      // History panel returns the file to how it stood before that write.
+      const haveOriginal = await fs.access(originalBackupPath).then(() => true, () => false)
+      const destBackupPath = haveOriginal ? getDatedBackupPath(filePath) : originalBackupPath
       try {
         await moveFile(exiftoolBackup, destBackupPath)
+        if (haveOriginal) await pruneBackups(filePath)
         return { success: true, backupPath: destBackupPath }
       } catch (backupError) {
         try {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { readExifData, writeExifData, restoreFromBackup, initBackupDir, getBackupPath, ExifData } from '../exif'
+import { readExifData, writeExifData, restoreFromBackup, initBackupDir, getBackupPath, getDatedBackupPath, pruneBackups, RECENT_BACKUPS_KEPT, ExifData } from '../exif'
 import type { ExifTool, Tags } from 'exiftool-vendored'
 
 // Mock fs/promises
@@ -7,11 +7,13 @@ vi.mock('fs/promises', () => ({
   access: vi.fn(),
   unlink: vi.fn(),
   rename: vi.fn(),
+  readdir: vi.fn(async () => [] as string[]),
   copyFile: vi.fn(),
   mkdir: vi.fn()
 }))
 
 import * as fs from 'fs/promises'
+import * as path from 'path'
 
 describe('exif', () => {
   let mockExifTool: ExifTool
@@ -205,6 +207,41 @@ describe('exif', () => {
     })
   })
 
+  describe('pruneBackups', () => {
+    it('keeps the original and the most recent writes, and drops the rest', async () => {
+      const filePath = '/test.jpg'
+      const original = path.basename(getBackupPath(filePath))
+      // eight dated backups, oldest first — the names sort chronologically
+      const dated = Array.from({ length: 8 }, (_, i) =>
+        path.basename(getDatedBackupPath(filePath, new Date(Date.UTC(2026, 0, 1 + i))))
+      )
+      vi.mocked(fs.readdir).mockResolvedValue([original, ...dated, 'someone-elses-backup.jpg'] as never)
+      const removed: string[] = []
+      vi.mocked(fs.unlink).mockImplementation(async (target) => { removed.push(path.basename(String(target))) })
+
+      await pruneBackups(filePath)
+
+      expect(removed).toHaveLength(dated.length - RECENT_BACKUPS_KEPT)
+      expect(removed).toEqual(dated.slice(0, dated.length - RECENT_BACKUPS_KEPT))
+      // never the original, and never another file's backups
+      expect(removed).not.toContain(original)
+      expect(removed).not.toContain('someone-elses-backup.jpg')
+    })
+
+    it('leaves everything alone while under the limit', async () => {
+      const filePath = '/test.jpg'
+      const dated = Array.from({ length: RECENT_BACKUPS_KEPT }, (_, i) =>
+        path.basename(getDatedBackupPath(filePath, new Date(Date.UTC(2026, 0, 1 + i))))
+      )
+      vi.mocked(fs.readdir).mockResolvedValue(dated as never)
+      vi.mocked(fs.unlink).mockClear()
+
+      await pruneBackups(filePath)
+
+      expect(fs.unlink).not.toHaveBeenCalled()
+    })
+  })
+
   describe('writeExifData', () => {
     it('should not write a field left blank in the sidebar', async () => {
       vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
@@ -392,11 +429,14 @@ describe('exif', () => {
 
       const result = await writeExifData(mockExifTool, filePath, { make: 'Canon' })
 
-      expect(result.backupPath).toBe(backupPath)
+      // the original is never overwritten; this write gets its own dated backup
       expect(files.get(backupPath)).toBe('ORIGINAL')
+      expect(result.backupPath).not.toBe(backupPath)
+      expect(result.backupPath).toMatch(/--\d{4}-\d{2}-\d{2}T/)
+      expect(fs.rename).toHaveBeenCalledWith(`${filePath}_original`, result.backupPath)
     })
 
-    it('should remove the fresh ExifTool backup when an authoritative backup exists', async () => {
+    it('should keep a dated backup for every write after the first', async () => {
       const files = new Map<string, string>()
       const filePath = '/test.jpg'
       const backupPath = getBackupPath(filePath)
@@ -412,9 +452,17 @@ describe('exif', () => {
         files.delete(String(target))
       })
 
-      await writeExifData(mockExifTool, filePath, { make: 'Canon' })
+      vi.mocked(fs.readdir).mockResolvedValue([] as never)
+      const first = await writeExifData(mockExifTool, filePath, { make: 'Canon' })
+      await new Promise((r) => setTimeout(r, 5))
+      const second = await writeExifData(mockExifTool, filePath, { make: 'Leica' })
 
-      expect(files.has(`${filePath}_original`)).toBe(false)
+      // each write is moved to its own dated backup, and the original is left alone
+      expect(first.backupPath).not.toBe(backupPath)
+      expect(second.backupPath).not.toBe(backupPath)
+      expect(files.get(backupPath)).toBe('ORIGINAL')
+      expect(fs.rename).toHaveBeenCalledWith(`${filePath}_original`, first.backupPath)
+      expect(fs.rename).toHaveBeenCalledWith(`${filePath}_original`, second.backupPath)
     })
 
     it('should not keep backup when keepBackup is false', async () => {
