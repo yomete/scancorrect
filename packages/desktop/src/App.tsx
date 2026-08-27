@@ -672,7 +672,11 @@ function App() {
                 >
                   {isProcessing
                     ? "Processing..."
-                    : `Save Changes (${imagesWithChanges})`}
+                    : imagesWithChanges === 0
+                    ? "Save Changes"
+                    : imagesWithChanges === 1
+                    ? "Save 1 image"
+                    : `Save all ${imagesWithChanges} images`}
                 </button>
               </div>
             </div>
