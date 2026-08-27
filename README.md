@@ -176,7 +176,9 @@ film-exif-editor/
 
 ### IPC API
 
-The app uses Electron's IPC for secure communication. `window.electronAPI` (exposed via `contextBridge` in `packages/desktop/electron/preload.ts`) includes: profile CRUD, EXIF read/write with backups, geocoding, thumbnail extraction/caching, processing log, custom values, saved locations, GPX import, Mapbox token management, and window controls. See `preload.ts` for the full `ElectronAPI` interface.
+The app uses Electron's IPC for secure communication. `window.electronAPI` (exposed via `contextBridge` in `packages/desktop/electron/preload.ts`) includes: profile CRUD, EXIF read/write with backups, geocoding, thumbnail extraction/caching, processing log, and window controls. See `preload.ts` for the full `ElectronAPI` interface.
+
+Note that the interface is wider than the app. Handlers for custom values, saved locations, GPX import and the Mapbox token are registered and never called, because nothing in the UI reaches them — see "Built but not wired up" in `CLAUDE.md`.
 
 ## Contributing
 

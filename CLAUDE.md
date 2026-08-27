@@ -55,7 +55,7 @@ All commands run from the **repo root** unless noted. Desktop-specific test comm
 
 **Backups**: on every EXIF write, backups are stored under `userData/backups` (initialized in `main.ts`). Restore via `restore-backup` IPC handler.
 
-**State management**: Zustand (`src/store/`) — `imageStore` owns loaded images + pending changes + selection; `locationStore` owns saved locations + history; `settingsStore` owns user preferences (cache toggle, etc.).
+**State management**: `App.tsx` holds the whole application state in component state — the image list, the selection, the pending changes, the write loop. The Zustand stores under `src/store/` are written and tested but nothing renders them; see "Built but not wired up" below.
 
 ## Conventions
 
@@ -71,16 +71,28 @@ All commands run from the **repo root** unless noted. Desktop-specific test comm
 - Camera profiles with defaults: ISO, aperture, shutter speed, focal length, exposure compensation, film stock, location
 - EXIF read/write with automatic backups + restore (`restore-backup` handler)
 - Scanner-metadata detection (hardcoded brand list in `electron/scanner-detection.ts`)
-- Geocoding via Nominatim (free, rate-limited); saved locations + search history
-- GPX track import with photo time-matching (paid tier)
-- Interactive Mapbox map picker (paid tier; token via `VITE_MAPBOX_TOKEN` or user settings)
-- Thumbnails with disk cache (exiftool extracts embedded JPEG; async loading with spinners)
+- Geocoding via Nominatim (free, rate-limited)
+- Thumbnails with disk cache (embedded JPEG, then the OS thumbnail service, then Chromium's decoder)
 - Processing log (persisted in electron-store)
 - Custom value lists for dropdowns (persisted)
 - Dark / light / system theme
 - macOS signed + notarized releases via GitHub Actions
 - Auto-update via `electron-updater` + GitHub Releases (update-ready pill in the Footer)
 - Window-bounds persistence across sessions
+
+## Built but not wired up
+
+Complete in the source, covered by tests, and reachable by no gesture in the app. Do not describe these as features of the product:
+
+- GPX track import and photo time-matching (`electron/gpx.ts`, `handlers/gpx-handlers.ts`, `components/GPXImport/`)
+- The interactive Mapbox map picker, and the Mapbox token it needs (`electron/mapbox.ts`, `get-mapbox-token`)
+- Saved locations and location search history (`handlers/locations.ts`, `components/SavedLocations/`)
+- The constrained value dropdowns and their custom values (`components/common/ConstrainedDropdown.tsx`, `get-custom-values`)
+- The merge-conflict editor (`components/MetadataEditor/MergeConflict.tsx`)
+- A second profile modal (`components/ProfileModal.tsx`)
+- Both Zustand stores (`src/store/imageStore.ts`, `src/store/settingsStore.ts`)
+
+Four electron-store keys — `savedLocations`, `locationHistory`, `gpxTracks`, `mapboxAccessToken` — can therefore only ever hold their defaults.
 
 ## Roadmap
 
