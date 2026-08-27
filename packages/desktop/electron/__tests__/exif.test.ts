@@ -179,6 +179,19 @@ describe('exif', () => {
   })
 
   describe('readExifData — unreadable files', () => {
+    it('throws for a file that is not an image whatever its name says', async () => {
+      vi.mocked(mockExifTool.read).mockResolvedValue({ MIMEType: 'text/plain', FileType: 'TXT' } as never)
+
+      await expect(readExifData(mockExifTool, '/not-really.jpg')).rejects.toThrow('Not an image')
+    })
+
+    it('accepts any image MIME type', async () => {
+      vi.mocked(mockExifTool.read).mockResolvedValue({ MIMEType: 'image/tiff', Make: 'Nikon' } as never)
+
+      const data = await readExifData(mockExifTool, '/scan.tif')
+      expect(data.make).toBe('Nikon')
+    })
+
     it('throws when exiftool reports an Error tag', async () => {
       // exiftool resolves for an empty file, with the failure in a tag
       vi.mocked(mockExifTool.read).mockResolvedValue({ Error: 'File is empty' } as never)
