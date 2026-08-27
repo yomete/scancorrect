@@ -89,7 +89,9 @@ function getChangesSummary(changes: Partial<ExifData>): string {
     parts.push(`${changes.focalLength}mm`);
   }
 
-  if (changes.exposureComp !== undefined) {
+  if (changes.exposureComp === null) {
+    parts.push("Exposure Comp removed");
+  } else if (changes.exposureComp !== undefined) {
     parts.push(formatExposureComp(changes.exposureComp));
   }
 
@@ -139,7 +141,9 @@ function getChangesDetails(changes: Partial<ExifData>): { label: string; value: 
     details.push({ label: "Focal Length", value: `${changes.focalLength}mm` });
   }
 
-  if (changes.exposureComp !== undefined) {
+  if (changes.exposureComp === null) {
+    details.push({ label: "Exposure Comp", value: "removed" });
+  } else if (changes.exposureComp !== undefined) {
     details.push({ label: "Exposure Comp", value: formatExposureComp(changes.exposureComp) });
   }
 

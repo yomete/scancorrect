@@ -30,19 +30,22 @@ export interface LocationValue {
 
 // EXIF metadata that can be read from or written to files.
 // Authoritative definition — renderer and electron both import from here.
+// A field is absent when the user has not touched it, and null when they have
+// asked for the tag to be removed from the file. The two are different: absent
+// leaves whatever is on the file alone, null deletes it.
 export interface ExifData {
-  make?: string
-  model?: string
-  lens?: string
-  iso?: number
-  aperture?: number
-  shutterSpeed?: number
-  focalLength?: number
-  exposureComp?: number
-  filmStock?: string
-  location?: LocationValue
-  dateOriginal?: string // YYYY-MM-DD format
-  dateTimeOriginal?: string // Full ISO timestamp for GPX matching
+  make?: string | null
+  model?: string | null
+  lens?: string | null
+  iso?: number | null
+  aperture?: number | null
+  shutterSpeed?: number | null
+  focalLength?: number | null
+  exposureComp?: number | null
+  filmStock?: string | null
+  location?: LocationValue | null
+  dateOriginal?: string | null // YYYY-MM-DD format
+  dateTimeOriginal?: string | null // Full ISO timestamp for GPX matching
 }
 
 // Batch EXIF read result: keyed by file path

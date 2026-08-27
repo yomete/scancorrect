@@ -243,6 +243,27 @@ describe('exif', () => {
   })
 
   describe('writeExifData', () => {
+    it('should remove a tag the user cleared', async () => {
+      vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
+
+      const data: ExifData = { make: null, location: null, dateOriginal: null, model: 'FM2' }
+
+      const result = await writeExifData(mockExifTool, '/test.jpg', data)
+
+      expect(result.success).toBe(true)
+      const written = vi.mocked(mockExifTool.write).mock.calls[0][1] as Record<string, unknown>
+      // null reaches exiftool, which deletes the tag
+      expect(written.Make).toBeNull()
+      expect(written.DateTimeOriginal).toBeNull()
+      // clearing a location removes all four GPS tags, not just two
+      expect(written.GPSLatitude).toBeNull()
+      expect(written.GPSLongitude).toBeNull()
+      expect(written.GPSLatitudeRef).toBeNull()
+      expect(written.GPSLongitudeRef).toBeNull()
+      // and an ordinary value alongside it is untouched
+      expect(written.Model).toBe('FM2')
+    })
+
     it('should not write a field left blank in the sidebar', async () => {
       vi.mocked(mockExifTool.write).mockResolvedValue(undefined)
 

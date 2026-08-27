@@ -223,6 +223,8 @@ export async function writeExifData(
     // A field added from the sidebar with nothing typed into it arrives as an
     // empty string. It is not a value the user chose, and writing it either
     // blanks a real tag or fails outright on the numeric ones, so drop it.
+    // null is deliberate and survives: it is the user asking for the tag to be
+    // removed, which exiftool does when a tag is set to null.
     data = Object.fromEntries(
       Object.entries(data).filter(([, value]) => value !== '')
     ) as ExifData
@@ -263,7 +265,13 @@ export async function writeExifData(
     }
 
     // GPS coordinates
-    if (data.location !== undefined) {
+    if (data.location === null) {
+      // Removing a location means removing all four tags, not blanking two.
+      tags.GPSLatitude = null
+      tags.GPSLongitude = null
+      tags.GPSLatitudeRef = null
+      tags.GPSLongitudeRef = null
+    } else if (data.location !== undefined) {
       const { latitude, longitude } = data.location
 
       // Write signed values; ExifTool derives the hemisphere from the sign.
@@ -276,7 +284,9 @@ export async function writeExifData(
     }
 
     // Date original - convert from YYYY-MM-DD to EXIF format YYYY:MM:DD HH:MM:SS
-    if (data.dateOriginal !== undefined) {
+    if (data.dateOriginal === null) {
+      tags.DateTimeOriginal = null
+    } else if (data.dateOriginal !== undefined) {
       const exifDate = data.dateOriginal.replace(/-/g, ':') + ' 12:00:00'
       tags.DateTimeOriginal = exifDate
     }

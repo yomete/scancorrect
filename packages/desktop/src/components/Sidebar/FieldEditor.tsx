@@ -5,8 +5,8 @@ interface FieldEditorProps {
   field: string;
   label: string;
   existingValue: string | number | undefined;
-  pendingValue: string | number | undefined;
-  onChange: (value: string | number | undefined) => void;
+  pendingValue: string | number | null | undefined;
+  onChange: (value: string | number | null | undefined) => void;
   onRestore: () => void;
   scannerReplaced?: boolean;
   options?: { value: string | number; label: string }[];
@@ -24,11 +24,19 @@ export function FieldEditor({
   options,
   type = "text",
 }: FieldEditorProps) {
-  const currentValue = pendingValue !== undefined ? pendingValue : existingValue;
+  // null means the user asked for the tag to be removed from the file.
+  const willBeRemoved = pendingValue === null;
+  const currentValue = willBeRemoved
+    ? ""
+    : pendingValue !== undefined
+    ? pendingValue
+    : existingValue;
   // A value edited and then typed back to match the file is still a pending
   // change, and still gets written — so it still needs a way back.
   const hasPendingChange = pendingValue !== undefined;
   const hasChanged = hasPendingChange && pendingValue !== existingValue;
+  // Only a value actually on the file can be removed from it.
+  const canRemove = existingValue !== undefined && existingValue !== "" && !willBeRemoved;
   const displayExisting = existingValue !== undefined ? String(existingValue) : "";
   const displayPending = pendingValue !== undefined ? String(pendingValue) : "";
 
@@ -67,9 +75,15 @@ export function FieldEditor({
         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
           <span className="line-through">{displayExisting || "(empty)"}</span>
           <Icon icon="mdi:arrow-right" className="w-3 h-3" />
-          <span className="text-blue-600 dark:text-blue-400 font-medium">
-            {displayPending || "(empty)"}
-          </span>
+          {willBeRemoved ? (
+            <span className="text-red-600 dark:text-red-400 font-medium">
+              will be removed from the file
+            </span>
+          ) : (
+            <span className="text-blue-600 dark:text-blue-400 font-medium">
+              {displayPending || "(empty)"}
+            </span>
+          )}
         </div>
       )}
 
@@ -92,8 +106,25 @@ export function FieldEditor({
             type={type === "date" ? "date" : type}
             value={currentValue !== undefined ? String(currentValue) : ""}
             onChange={handleChange}
-            className="flex-1 p-2 px-3 border border-gray-300 dark:border-gray-600 dark:bg-neutral-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500"
+            placeholder={willBeRemoved ? "will be removed" : undefined}
+            className={`flex-1 p-2 px-3 border rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500 dark:bg-neutral-700 dark:text-gray-200 ${
+              willBeRemoved
+                ? "border-red-300 dark:border-red-800 placeholder:text-red-500 dark:placeholder:text-red-400"
+                : "border-gray-300 dark:border-gray-600"
+            }`}
           />
+        )}
+
+        {canRemove && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-neutral-600 rounded-md transition-colors"
+            title="Remove this tag from the file"
+            aria-label={`Remove ${label} from the file`}
+          >
+            <Icon icon="mdi:close-circle-outline" className="w-4 h-4" />
+          </button>
         )}
 
         {hasPendingChange && (

@@ -36,6 +36,55 @@ describe("exif integration (real ExifTool binary)", () => {
     return dest;
   }
 
+  it("removes a tag when the user clears it", async () => {
+    const file = await copyFixture("clearing.jpg");
+
+    await writeExifData(exiftool, file, {
+      make: "Nikon",
+      model: "FM2",
+      iso: 400,
+      filmStock: "Portra 400",
+      location: { name: "Lisbon", latitude: 38.71, longitude: -9.13 },
+    });
+    const before = await readExifData(exiftool, file);
+    expect(before.make).toBe("Nikon");
+    expect(before.iso).toBe(400);
+    expect(before.location).toBeDefined();
+
+    // clear three of them, leave the rest alone
+    await writeExifData(exiftool, file, { make: null, iso: null, location: null });
+    const after = await readExifData(exiftool, file);
+
+    expect(after.make).toBeUndefined();
+    expect(after.iso).toBeUndefined();
+    expect(after.location).toBeUndefined();
+    // untouched fields survive
+    expect(after.model).toBe("FM2");
+    expect(after.filmStock).toBe("Portra 400");
+  });
+
+  it("keeps a dated backup for each write after the first", async () => {
+    const file = await copyFixture("backups.jpg");
+    const backupDir = path.join(workDir, "backups");
+
+    const first = await writeExifData(exiftool, file, { make: "Nikon" });
+    const second = await writeExifData(exiftool, file, { make: "Canon" });
+    const third = await writeExifData(exiftool, file, { make: "Leica" });
+
+    expect(first.backupPath).toBeDefined();
+    expect(new Set([first.backupPath, second.backupPath, third.backupPath]).size).toBe(3);
+
+    const entries = await fs.readdir(backupDir);
+    expect(entries.length).toBeGreaterThanOrEqual(3);
+
+    // the first backup is the untouched original: no Make at all
+    const original = await readExifData(exiftool, first.backupPath!);
+    expect(original.make).toBeUndefined();
+    // the second backup holds the file as it stood after the first write
+    const secondBackup = await readExifData(exiftool, second.backupPath!);
+    expect(secondBackup.make).toBe("Nikon");
+  });
+
   it("writes and reads back camera make/model/iso/gps", async () => {
     const file = await copyFixture("roundtrip.jpg");
 

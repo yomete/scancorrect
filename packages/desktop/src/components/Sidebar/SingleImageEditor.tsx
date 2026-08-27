@@ -136,7 +136,7 @@ export function SingleImageEditor({
             field={field}
             label={FIELD_LABELS[field] || field}
             existingValue={existingExif[field] as string | number | undefined}
-            pendingValue={pendingChanges[field] as string | number | undefined}
+            pendingValue={pendingChanges[field] as string | number | null | undefined}
             onChange={(value) => handleFieldChange(field, value)}
             onRestore={() => handleRestore(field)}
             scannerReplaced={isScannerReplaced(field)}
