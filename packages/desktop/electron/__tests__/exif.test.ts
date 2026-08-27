@@ -184,6 +184,19 @@ describe('exif', () => {
       await expect(readExifData(mockExifTool, '/empty.jpg')).rejects.toThrow('File is empty')
     })
 
+    it('still reads a damaged file that yields usable metadata', async () => {
+      // a truncated frame exiftool complains about but can still partly read
+      vi.mocked(mockExifTool.read).mockResolvedValue({
+        Error: 'JPEG format error',
+        Make: 'Nikon',
+        Model: 'FM2',
+      } as never)
+
+      const data = await readExifData(mockExifTool, '/truncated.jpg')
+      expect(data.make).toBe('Nikon')
+      expect(data.model).toBe('FM2')
+    })
+
     it('still reads a file that only carries a Warning', async () => {
       vi.mocked(mockExifTool.read).mockResolvedValue({ Warning: 'Odd padding', Make: 'Nikon' } as never)
 

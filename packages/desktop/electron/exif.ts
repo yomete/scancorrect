@@ -58,14 +58,6 @@ export async function readExifData(
 ): Promise<ExifData> {
   const tags = await exiftool.read(filePath) as ExtendedTags
 
-  // exiftool resolves rather than rejecting for a file it cannot make sense of
-  // — an empty or truncated frame comes back as a tag set carrying an Error.
-  // Nothing downstream looks at that, so the file would load as if it were
-  // fine. Turn it into the failure the callers already handle.
-  if (tags.Error) {
-    throw new Error(String(tags.Error))
-  }
-
   const exifData: ExifData = {}
 
   // Camera info
@@ -158,6 +150,16 @@ export async function readExifData(
         exifData.dateTimeOriginal = `${fullMatch[1]}-${fullMatch[2]}-${fullMatch[3]}T${fullMatch[4]}:${fullMatch[5]}:${fullMatch[6]}`
       }
     }
+  }
+
+  // exiftool resolves rather than rejecting for a file it cannot make sense of
+  // — an empty or unreadable frame comes back as a tag set carrying an Error.
+  // Nothing downstream looked at that, so such a file loaded as if it were
+  // fine. Only treat it as a failure when nothing usable came back: a frame
+  // that is damaged but still yields metadata stays loadable and editable,
+  // which is the more useful behaviour for a scan the user cannot re-make.
+  if (tags.Error && Object.keys(exifData).length === 0) {
+    throw new Error(String(tags.Error))
   }
 
   return exifData
