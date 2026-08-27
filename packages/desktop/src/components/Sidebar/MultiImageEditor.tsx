@@ -41,6 +41,14 @@ export function MultiImageEditor({
   const commonFields = useMemo(() => {
     const fieldValues: Record<string, Set<string>> = {};
 
+    // Track the file's value and the pending value apart, as well as the
+    // effective one. With them separated a field the whole selection shares
+    // can show what it was and what it will become, the same as the
+    // single-image editor does.
+    const existingValues: Record<string, Set<string>> = {};
+    const pendingValues: Record<string, Set<string>> = {};
+    const pendingCount: Record<string, number> = {};
+
     images.forEach((image) => {
       const existing = image.existingExif || {};
       const pending = image.pendingChanges || {};
@@ -49,21 +57,32 @@ export function MultiImageEditor({
         if (field === "location") return;
         const key = field as keyof ExifData;
         const value = pending[key] !== undefined ? pending[key] : existing[key];
-        if (!fieldValues[field]) {
-          fieldValues[field] = new Set();
-        }
-        if (value !== undefined) {
-          fieldValues[field].add(String(value));
+        fieldValues[field] ??= new Set();
+        existingValues[field] ??= new Set();
+        pendingValues[field] ??= new Set();
+        pendingCount[field] ??= 0;
+        if (value !== undefined) fieldValues[field].add(String(value));
+        if (existing[key] !== undefined) existingValues[field].add(String(existing[key]));
+        if (pending[key] !== undefined) {
+          pendingValues[field].add(String(pending[key]));
+          pendingCount[field] += 1;
         }
       });
     });
+
+    const only = (set: Set<string>): string | undefined =>
+      set.size === 1 ? Array.from(set)[0] : undefined;
 
     return Object.entries(fieldValues)
       .filter(([_, values]) => values.size > 0)
       .map(([field, values]) => ({
         field: field as keyof ExifData,
         hasMultipleValues: values.size > 1,
-        commonValue: values.size === 1 ? Array.from(values)[0] : undefined,
+        commonExisting: only(existingValues[field]),
+        // Only offer a diff when every selected image carries the same pending
+        // value; a partial edit has nothing single to show.
+        commonPending:
+          pendingCount[field] === images.length ? only(pendingValues[field]) : undefined,
       }));
   }, [images]);
 
@@ -121,7 +140,7 @@ export function MultiImageEditor({
       </div>
 
       <div className="flex flex-col gap-4">
-        {commonFields.map(({ field, hasMultipleValues, commonValue }) => (
+        {commonFields.map(({ field, hasMultipleValues, commonExisting, commonPending }) => (
           <div key={field} className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {FIELD_LABELS[field]}
@@ -150,8 +169,8 @@ export function MultiImageEditor({
               <FieldEditor
                 field={field}
                 label=""
-                existingValue={commonValue}
-                pendingValue={undefined}
+                existingValue={commonExisting}
+                pendingValue={commonPending}
                 onChange={(value) => handleFieldChange(field, value)}
                 onRestore={() => handleRestore(field)}
                 type={FIELD_TYPES[field]}
