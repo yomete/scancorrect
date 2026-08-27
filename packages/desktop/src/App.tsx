@@ -157,6 +157,17 @@ function App() {
     }
   }, [selectedProfile]);
 
+  // One question, asked the same way everywhere work is about to be lost.
+  // The window close guard asks about exactly this, in these words; the
+  // in-app paths that discard should not be quieter than it is.
+  const confirmDiscard = (count: number, whatHappens: string): boolean => {
+    if (count === 0) return true;
+    const images = count === 1 ? "1 image" : `${count} images`;
+    return window.confirm(
+      `You have unsaved changes to ${images}.\n\n${whatHappens}\n\nThis cannot be undone.`
+    );
+  };
+
   // Track if save was triggered by close dialog
   const saveAndCloseRef = useRef(false);
 
@@ -274,10 +285,43 @@ function App() {
   };
 
   const handleProfileSelect = (profileId: string) => {
-    setSelectedProfile(profileId);
+    // Clicking the profile that is already active used to run the whole
+    // rewrite, destroying hand-typed values for no gain. Apply Profile
+    // Defaults is the way to deliberately re-apply.
+    if (profileId === selectedProfile) return;
 
     const profile = profiles.find((p) => p.id === profileId);
-    if (!profile || images.length === 0) return;
+    if (!profile || images.length === 0) {
+      setSelectedProfile(profileId);
+      return;
+    }
+
+    // Only ask about work the user actually authored. Loading a roll with a
+    // profile active seeds every image with that profile's fields, and losing
+    // those to another profile costs the user nothing — so compare against
+    // what the current profile would have written and ignore the matches.
+    const activeProfile = profiles.find((p) => p.id === selectedProfile);
+    const seeded: ExifData = activeProfile
+      ? applyProfileToPendingChanges(undefined, activeProfile)
+      : {};
+    const wouldOverwrite = images.filter((img) => {
+      const pending = img.pendingChanges;
+      if (!pending) return false;
+      return PROFILE_FIELDS.some((field) => {
+        if (pending[field] === undefined) return false;
+        return JSON.stringify(pending[field]) !== JSON.stringify(seeded[field]);
+      });
+    }).length;
+    if (
+      !confirmDiscard(
+        wouldOverwrite,
+        "Switching camera profile overwrites the camera and exposure fields on every loaded image, including anything you have typed."
+      )
+    ) {
+      return;
+    }
+
+    setSelectedProfile(profileId);
 
     setImages((prev) =>
       prev.map((img) => ({
@@ -583,12 +627,23 @@ function App() {
   };
 
   const handleClearImages = () => {
+    if (!confirmDiscard(imagesWithChanges, "Going back will discard them.")) {
+      return;
+    }
     setImages([]);
     setSelectedImageIds(new Set());
     setCurrentView("dropzone");
   };
 
   const handleDiscardChanges = () => {
+    if (
+      !confirmDiscard(
+        imagesWithChanges,
+        "Discard All clears every field you have changed, on every loaded image."
+      )
+    ) {
+      return;
+    }
     // Clear all pending changes from all images
     setImages((prev) =>
       prev.map((img) => ({
