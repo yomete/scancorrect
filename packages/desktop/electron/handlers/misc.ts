@@ -6,7 +6,6 @@ import * as path from 'path'
 import type { CollectedPaths } from '../ipc-types'
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.tif', '.tiff'])
-import { autoUpdater } from 'electron-updater'
 import { isUpdateDownloaded } from '../updater'
 
 interface MiscHandlerDeps {
@@ -15,6 +14,8 @@ interface MiscHandlerDeps {
   getMainWindow: () => BrowserWindow | null
   getForceCloseWindow: () => boolean
   setForceCloseWindow: (v: boolean) => void
+  /** Injected rather than imported so this module needs no runtime electron. */
+  quitApp: () => void
   dialog: Dialog
 }
 
@@ -24,6 +25,7 @@ export function registerMiscHandlers({
   getMainWindow,
   getForceCloseWindow: _getForceCloseWindow,
   setForceCloseWindow,
+  quitApp,
   dialog,
 }: MiscHandlerDeps): void {
   ipcMain.handle('show-open-dialog', async (): Promise<string[] | undefined> => {
@@ -114,6 +116,11 @@ export function registerMiscHandlers({
 
   ipcMain.handle('install-update-now', (): void => {
     if (!isUpdateDownloaded()) return
-    autoUpdater.quitAndInstall()
+    // Quit rather than calling quitAndInstall straight away. Quitting runs the
+    // unsaved-changes guard on the way out, and autoInstallOnAppQuit is set, so
+    // the update still lands as the app goes down. Cancelling at the guard
+    // cancels the update too, which is what the user just asked for by saying
+    // they had work to keep.
+    quitApp()
   })
 }

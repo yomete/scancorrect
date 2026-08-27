@@ -17,6 +17,7 @@ import { autoUpdater } from 'electron-updater'
 
 const mockIsUpdateDownloaded = vi.mocked(isUpdateDownloaded)
 const mockQuitAndInstall = vi.mocked(autoUpdater.quitAndInstall)
+const mockQuitApp = vi.fn()
 
 function makeFakeIpc() {
   const handlers = new Map<string, (...args: unknown[]) => unknown>()
@@ -54,6 +55,7 @@ describe('collect-image-paths', () => {
       getMainWindow: () => null,
       getForceCloseWindow: () => false,
       setForceCloseWindow: () => {},
+      quitApp: () => {},
       dialog: {} as never,
     })
     dir = fs.mkdtempSync(nodePath.join(os.tmpdir(), 'scancorrect-collect-'))
@@ -118,6 +120,7 @@ describe('registerMiscHandlers', () => {
       getMainWindow: () => null,
       getForceCloseWindow: () => forceCloseValue,
       setForceCloseWindow: (v) => { forceCloseValue = v },
+      quitApp: mockQuitApp,
       dialog: {
         showOpenDialog: vi.fn().mockResolvedValue({ canceled: true, filePaths: [] }),
       } as any,
@@ -197,18 +200,22 @@ describe('registerMiscHandlers', () => {
   })
 
   describe('install-update-now', () => {
-    it('does not install when an update has not been downloaded', async () => {
+    it('does nothing when an update has not been downloaded', async () => {
       await ipc.invoke('install-update-now')
 
+      expect(mockQuitApp).not.toHaveBeenCalled()
       expect(mockQuitAndInstall).not.toHaveBeenCalled()
     })
 
-    it('installs when an update has been downloaded', async () => {
+    it('quits rather than installing directly, so the unsaved-changes guard runs', async () => {
       mockIsUpdateDownloaded.mockReturnValue(true)
 
       await ipc.invoke('install-update-now')
 
-      expect(mockQuitAndInstall).toHaveBeenCalled()
+      expect(mockQuitApp).toHaveBeenCalled()
+      // quitAndInstall would skip the guard; autoInstallOnAppQuit lands the
+      // update on the way down instead
+      expect(mockQuitAndInstall).not.toHaveBeenCalled()
     })
   })
 })
