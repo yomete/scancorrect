@@ -4,7 +4,7 @@
 // card between its scanner state (wrong camera, struck red, flat scan) and its
 // corrected state (real camera data, crisp). Pointer + touch + keyboard driven.
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { memo, useState, useRef, useEffect, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import { MonoEyebrow } from './Shared';
 
@@ -20,12 +20,12 @@ const ROWS: [string, string, string, boolean][] = [
 
 const ROW_H = 38;
 
-function InspectorFace({ variant }: { variant: 'before' | 'after' }) {
+const InspectorFace = memo(function InspectorFace({ variant }: { variant: 'before' | 'after' }) {
   const before = variant === 'before';
   return (
-    <div style={{ position: 'absolute', inset: 0, display: 'flex', background: 'var(--surface)', userSelect: 'none' }}>
+    <div className="face-root" style={{ position: 'absolute', inset: 0, display: 'flex', background: 'var(--surface)', userSelect: 'none' }}>
       {/* photo */}
-      <div style={{ position: 'relative', width: '42%', flexShrink: 0, overflow: 'hidden', background: '#000' }}>
+      <div className="face-photo" style={{ position: 'relative', width: '42%', flexShrink: 0, overflow: 'hidden', background: '#000' }}>
         <img src="/film-thumb.png" alt="film frame" draggable={false}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
             filter: before ? 'grayscale(1) contrast(0.82) brightness(1.08)' : 'grayscale(1) contrast(1.12)',
@@ -48,7 +48,7 @@ function InspectorFace({ variant }: { variant: 'before' | 'after' }) {
           padding: '4px 9px', borderRadius: 6 }}>HP5_221025_022.jpg</div>
       </div>
       {/* metadata */}
-      <div style={{ flex: 1, padding: '20px 26px', display: 'flex', flexDirection: 'column' }}>
+      <div className="face-meta" style={{ flex: 1, minWidth: 0, padding: '20px 26px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase',
           color: 'var(--faint)', marginBottom: 14 }}>EXIF · IFD0</div>
         <div>
@@ -81,7 +81,7 @@ function InspectorFace({ variant }: { variant: 'before' | 'after' }) {
       </div>
     </div>
   );
-}
+});
 
 export function MetadataReveal() {
   const [pos, setPos] = useState(58);
@@ -127,7 +127,7 @@ export function MetadataReveal() {
 
   return (
     <section style={{ borderTop: '1px solid var(--border)' }}>
-      <div style={{ maxWidth: 1140, margin: '0 auto', padding: '88px 28px' }}>
+      <div className="site-container" style={{ maxWidth: 1140, margin: '0 auto', padding: '88px 28px' }}>
         <MonoEyebrow>Before / after</MonoEyebrow>
         <h2 className="text-balance" style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(2rem, 3.4vw, 2.75rem)', fontWeight: 600,
           letterSpacing: '-0.02em', color: 'var(--text)', margin: '20px 0 8px', maxWidth: 620 }}>
@@ -140,10 +140,12 @@ export function MetadataReveal() {
 
         <div
           ref={wrap}
-          onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}
+          className="reveal-card"
+          onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}
+          onPointerCancel={onUp} onPointerLeave={onUp}
           style={{ position: 'relative', width: '100%', maxWidth: 880, height: 392,
             borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)',
-            boxShadow: '0 40px 90px rgba(0,0,0,0.5)', cursor: 'col-resize', touchAction: 'none' }}>
+            boxShadow: '0 40px 90px rgba(0,0,0,0.5)', cursor: 'col-resize', touchAction: 'pan-y' }}>
           {/* AFTER (base) */}
           <InspectorFace variant="after" />
           {/* BEFORE (clipped to left of handle) */}
@@ -160,8 +162,11 @@ export function MetadataReveal() {
                 width: 46, height: 46, borderRadius: '50%', border: '1px solid var(--border)',
                 background: 'var(--surface-2)', boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'col-resize',
-                color: 'var(--text)', outlineColor: 'var(--blue)' }}>
-              <Icon icon="mdi:unfold-more-vertical" style={{ fontSize: 22, transform: 'rotate(90deg)' }} />
+                color: 'var(--text)', outlineColor: 'var(--blue)', touchAction: 'none' }}>
+              <svg width="18" height="14" viewBox="0 0 18 14" fill="none" aria-hidden="true">
+                <path d="M6 2L1 7L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 2L17 7L12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
             {hint &&
               <span style={{ position: 'absolute', top: 'calc(50% + 34px)', left: '50%', transform: 'translateX(-50%)',

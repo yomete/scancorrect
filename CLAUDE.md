@@ -59,6 +59,8 @@ All commands run from the **repo root** unless noted. Desktop-specific test comm
 
 ## Conventions
 
+- Git commits: title-only messages (no body), and never add AI co-author/attribution lines (no `Co-Authored-By`, no "Generated with" footers).
+- Git branches: no `claude/` prefix — name branches after the work itself (e.g. `mobile-responsive-layout`).
 - TypeScript strict mode throughout; `noUnusedLocals`/`noUnusedParameters` enforced.
 - `electron/` uses CommonJS (`"module": "commonjs"`); `src/` uses ESNext modules via Vite.
 - No semicolons in `electron/` source (match existing style before editing).
