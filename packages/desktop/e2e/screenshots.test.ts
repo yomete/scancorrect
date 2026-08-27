@@ -31,7 +31,14 @@ test("loads images, renders previews, and opens the metadata panel", async () =>
   });
 
   const app = await electron.launch({
-    args: [path.join(__dirname, ".."), "--no-sandbox"],
+    args: [
+      path.join(__dirname, ".."),
+      "--no-sandbox",
+      // Isolate the app data. Without this the tests read and write the
+      // developer's own profiles, and a saved profile seeds pending changes
+      // that make the close guard open a modal the test cannot answer.
+      `--user-data-dir=${fs.mkdtempSync(path.join(os.tmpdir(), "sc-userdata-"))}`,
+    ],
     // NODE_ENV=test makes the main process load the built dist instead of the
     // (non-running) Vite dev server. Matches e2e/app.test.ts.
     env: { ...process.env, NODE_ENV: "test" },
