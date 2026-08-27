@@ -78,6 +78,8 @@ export interface ProcessingLogEntry {
   error?: string
   warning?: string
   backupPath?: string
+  /** Set when the user restored this write from its backup. */
+  restoredAt?: string
 }
 
 export interface FinderMetadataSnapshot {

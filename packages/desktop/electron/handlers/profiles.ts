@@ -76,6 +76,17 @@ export function registerProfileHandlers({ ipcMain, getStore }: ProfileHandlerDep
     getStore().set('processingLog', log)
   })
 
+  // A restore is part of what happened to the file, so the entry is marked
+  // rather than removed — otherwise the log stops showing that the file was
+  // ever written, and the removal did not survive a restart anyway.
+  ipcMain.handle('mark-log-entry-restored', (_, entryId: string): void => {
+    const log = getStore().get('processingLog', [])
+    const entry = log.find((e) => e.id === entryId)
+    if (!entry) return
+    entry.restoredAt = new Date().toISOString()
+    getStore().set('processingLog', log)
+  })
+
   ipcMain.handle('clear-processing-log', (): void => {
     getStore().set('processingLog', [])
   })

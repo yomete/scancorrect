@@ -45,6 +45,7 @@ export interface ElectronAPI {
   // Processing log
   getProcessingLog: () => Promise<ProcessingLogEntry[]>
   addLogEntry: (entry: ProcessingLogEntry) => Promise<void>
+  markLogEntryRestored: (entryId: string) => Promise<void>
   clearProcessingLog: () => Promise<void>
 
   // Thumbnail extraction and caching
@@ -129,6 +130,7 @@ const electronAPI: ElectronAPI = {
   // Processing log
   getProcessingLog: () => ipcRenderer.invoke('get-processing-log'),
   addLogEntry: (entry: ProcessingLogEntry) => ipcRenderer.invoke('add-log-entry', entry),
+  markLogEntryRestored: (entryId: string) => ipcRenderer.invoke('mark-log-entry-restored', entryId),
   clearProcessingLog: () => ipcRenderer.invoke('clear-processing-log'),
 
   // Thumbnail extraction and caching

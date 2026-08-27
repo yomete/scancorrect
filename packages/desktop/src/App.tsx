@@ -657,8 +657,13 @@ function App() {
         entry.backupPath
       );
       if (result.success) {
-        // Remove entry from log
-        setProcessingLog((prev) => prev.filter((e) => e.id !== entry.id));
+        // Mark the entry rather than dropping it: the write did happen, and
+        // the panel is the only lasting record that it did.
+        await window.electronAPI.markLogEntryRestored(entry.id);
+        const restoredAt = new Date().toISOString();
+        setProcessingLog((prev) =>
+          prev.map((e) => (e.id === entry.id ? { ...e, restoredAt } : e))
+        );
       } else {
         alert(`Failed to restore backup: ${result.error}`);
       }
