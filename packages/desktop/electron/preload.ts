@@ -3,6 +3,7 @@ import type {
   CameraProfile,
   ExifData,
   ExifBatchResult,
+  CollectedPaths,
   CustomValues,
   ProcessingLogEntry,
   FolderMetadataVerificationResult,
@@ -19,6 +20,7 @@ export interface ElectronAPI {
   saveProfile: (profile: CameraProfile) => Promise<void>
   deleteProfile: (profileId: string) => Promise<void>
   showOpenDialog: () => Promise<string[] | undefined>
+  collectImagePaths: (paths: string[]) => Promise<CollectedPaths>
 
   // Platform info + dropped-file path resolution
   platform: string
@@ -98,6 +100,7 @@ const electronAPI: ElectronAPI = {
   saveProfile: (profile: CameraProfile) => ipcRenderer.invoke('save-profile', profile),
   deleteProfile: (profileId: string) => ipcRenderer.invoke('delete-profile', profileId),
   showOpenDialog: () => ipcRenderer.invoke('show-open-dialog'),
+  collectImagePaths: (paths: string[]) => ipcRenderer.invoke('collect-image-paths', paths),
 
   // Platform info + dropped-file path resolution (webUtils replaces the
   // deprecated File.path, which was removed in Electron 32)
