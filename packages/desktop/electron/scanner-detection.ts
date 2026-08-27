@@ -38,7 +38,7 @@ export const SCANNER_BRANDS: readonly string[] = [
  * @param model - The camera model from EXIF data
  * @returns true if the metadata appears to be from a scanner
  */
-export function isLikelyScannerMetadata(make?: string, model?: string): boolean {
+export function isLikelyScannerMetadata(make?: string | null, model?: string | null): boolean {
   const combined = `${make || ''} ${model || ''}`.toLowerCase()
   return SCANNER_BRANDS.some(brand => combined.includes(brand))
 }
@@ -50,7 +50,7 @@ export function isLikelyScannerMetadata(make?: string, model?: string): boolean 
  * @param model - The camera model from EXIF data
  * @returns A warning message if scanner detected, null otherwise
  */
-export function getScannerWarning(make?: string, model?: string): string | null {
+export function getScannerWarning(make?: string | null, model?: string | null): string | null {
   if (!isLikelyScannerMetadata(make, model)) {
     return null
   }

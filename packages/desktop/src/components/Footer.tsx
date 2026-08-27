@@ -14,6 +14,9 @@ interface FooterProps {
   onProfileEdit?: (profile: CameraProfile) => void;
   /** Set while a write is running: changing profiles mid-batch is ambiguous. */
   disabled?: boolean;
+  /** Only passed on the drop zone, where the action bar's History is absent. */
+  onOpenHistory?: () => void;
+  historyCount?: number;
 }
 
 export function Footer({
@@ -24,6 +27,8 @@ export function Footer({
   onProfileDelete,
   onProfileEdit,
   disabled = false,
+  onOpenHistory,
+  historyCount = 0,
 }: FooterProps) {
   const currentProfile = profiles.find((p) => p.id === selectedProfile);
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
@@ -71,6 +76,19 @@ export function Footer({
           >
             <Icon icon="material-symbols:system-update" className="text-sm" />
             v{updateVersion} ready — Restart to update
+          </button>
+        )}
+
+        {onOpenHistory && (
+          <button
+            className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 flex items-center gap-1 flex-shrink-0"
+            onClick={onOpenHistory}
+            title="Open the processing history"
+          >
+            History
+            <span className="ml-1 px-1.5 py-0.5 text-xs bg-gray-200 dark:bg-neutral-600 rounded-full tabular-nums">
+              {historyCount}
+            </span>
           </button>
         )}
 

@@ -84,6 +84,9 @@ export function BulkActionBar({
           Apply Profile Defaults
         </button>
 
+        {/* Deselect All already covers this when everything is selected; showing
+            both put two controls with the same effect side by side. */}
+        {!allSelected && (
         <button
           type="button"
           onClick={onClearSelection}
@@ -93,6 +96,7 @@ export function BulkActionBar({
           <Icon icon="mdi:close" width={16} height={16} />
           Clear Selection
         </button>
+        )}
       </div>
     </div>
   );

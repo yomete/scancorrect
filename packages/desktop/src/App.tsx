@@ -554,6 +554,12 @@ function App() {
     );
 
     for (const image of batch) {
+      setImages((prev) =>
+        prev.map((img) =>
+          img.path === image.path ? { ...img, status: "processing" as const } : img
+        )
+      );
+
       try {
         const writeResult = await window.electronAPI.writeExif(
           image.path,
@@ -744,14 +750,11 @@ function App() {
       <main className="flex-1 flex flex-col overflow-hidden">
         {currentView === "dropzone" ? (
           <DropZone
-            isDragOver={false}
             isProcessing={isProcessing}
-            results={[]}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onFileSelect={handleFileSelect}
-            onClearResults={() => {}}
           />
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -847,6 +850,12 @@ function App() {
 
       <Footer
         disabled={isProcessing}
+        onOpenHistory={
+          currentView === "dropzone" && processingLog.length > 0
+            ? () => setIsLogOpen(true)
+            : undefined
+        }
+        historyCount={processingLog.length}
         profiles={profiles}
         selectedProfile={selectedProfile}
         onAddProfile={() => setIsCreatingProfile(true)}

@@ -1,5 +1,4 @@
 import React, { useMemo } from "react";
-import { Icon } from "@iconify/react";
 import { ImageCard } from "./ImageCard";
 import type { ImageFile } from "../../types";
 
@@ -94,7 +93,6 @@ export function ImageGrid({
         </div>
 
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-          <Icon icon="mdi:sort-alphabetical-ascending" className="w-4 h-4" />
           <span className="tabular-nums">{images.length} {images.length === 1 ? "image" : "images"}</span>
         </div>
       </div>
