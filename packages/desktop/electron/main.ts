@@ -264,6 +264,7 @@ function registerAllHandlers(): void {
     getMainWindow,
     getForceCloseWindow: () => forceCloseWindow,
     setForceCloseWindow: (v) => { forceCloseWindow = v },
+    quitApp: () => app.quit(),
     dialog,
   })
 }

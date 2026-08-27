@@ -51,6 +51,15 @@ export interface ExifData {
 // Batch EXIF read result: keyed by file path
 export type ExifBatchResult = Record<string, { data: ExifData; isScanner: boolean } | { error: string }>
 
+// What a drop turned out to contain once the filesystem was consulted.
+export interface CollectedPaths {
+  files: string[]
+  /** How many folders were dropped. Their contents are in `files`. */
+  folders: number
+  /** Visible files that are not a JPEG or TIFF, or could not be read at all. */
+  unsupported: number
+}
+
 export interface CustomValues {
   isoValues: number[]
   apertureValues: number[]
@@ -69,6 +78,8 @@ export interface ProcessingLogEntry {
   error?: string
   warning?: string
   backupPath?: string
+  /** Set when the user restored this write from its backup. */
+  restoredAt?: string
 }
 
 export interface FinderMetadataSnapshot {

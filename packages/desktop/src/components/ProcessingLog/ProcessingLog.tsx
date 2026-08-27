@@ -125,7 +125,7 @@ export function ProcessingLog({
                   key={entry.id}
                   entry={entry}
                   onUndo={() => onUndo(entry)}
-                  canUndo={Boolean(entry.backupPath) && entry.success}
+                  canUndo={Boolean(entry.backupPath) && entry.success && !entry.restoredAt}
                 />
               ))}
             </div>

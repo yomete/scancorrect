@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Icon } from "@iconify/react";
 import { CameraProfile, ProfileDefaults, LocationValue, GeocodingResult } from "../../types";
 import { CameraStep } from "./CameraStep";
 import { ExposureStep } from "./ExposureStep";
@@ -153,7 +154,7 @@ export function ProfileWizard({
               className="text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded w-7 h-7 flex items-center justify-center text-lg"
               onClick={handleClose}
             >
-              X
+              <Icon icon="mdi:close" width={20} height={20} />
             </button>
           </div>
 
@@ -248,7 +249,7 @@ export function ProfileWizard({
                 className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-5 py-2.5 text-sm transition-colors"
                 onClick={handleSkip}
               >
-                Skip
+                {currentStep === 3 ? "Save without these" : "Skip"}
               </button>
             )}
 

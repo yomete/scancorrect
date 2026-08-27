@@ -1,5 +1,13 @@
 import { test, expect, _electron as electron, ElectronApplication, Page } from '@playwright/test'
 import * as path from 'path'
+import * as os from 'os'
+import * as fs from 'fs'
+
+// Isolate the app data. Without this the tests read and write the developer's
+// own profiles, and a saved profile seeds pending changes that make the close
+// guard open a modal the test cannot answer.
+const freshUserData = () =>
+  `--user-data-dir=${fs.mkdtempSync(path.join(os.tmpdir(), 'sc-userdata-'))}`
 
 let electronApp: ElectronApplication
 let page: Page
@@ -9,7 +17,7 @@ test.describe('ScanCorrect E2E Tests', () => {
     // Launch Electron app
     // The app needs to be built first: npm run build
     electronApp = await electron.launch({
-      args: [path.join(__dirname, '..')],
+      args: [path.join(__dirname, '..'), freshUserData()],
       env: {
         ...process.env,
         NODE_ENV: 'test'
@@ -111,7 +119,7 @@ test.describe('ScanCorrect E2E Tests', () => {
 test.describe('Profile Management', () => {
   test.beforeAll(async () => {
     electronApp = await electron.launch({
-      args: [path.join(__dirname, '..')],
+      args: [path.join(__dirname, '..'), freshUserData()],
       env: {
         ...process.env,
         NODE_ENV: 'test'
@@ -144,7 +152,7 @@ test.describe('Profile Management', () => {
 test.describe('Drag and Drop', () => {
   test.beforeAll(async () => {
     electronApp = await electron.launch({
-      args: [path.join(__dirname, '..')],
+      args: [path.join(__dirname, '..'), freshUserData()],
       env: {
         ...process.env,
         NODE_ENV: 'test'

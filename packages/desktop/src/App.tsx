@@ -345,6 +345,14 @@ function App() {
       status: "pending" as const,
     }));
 
+    // Show the cards first, then fill their metadata in. Switching the view
+    // before adding anything left the user looking at an empty grid headed
+    // "0 images loaded" for as long as the batch read took — about three
+    // seconds for sixty files, and indistinguishable from a failed drop.
+    setImages((prev) => {
+      const loadedPaths = new Set(prev.map((image) => image.path));
+      return [...prev, ...newImages.filter((image) => !loadedPaths.has(image.path))];
+    });
     setCurrentView("grid");
 
     // Read EXIF data for all new images in a single batch IPC call
@@ -375,11 +383,10 @@ function App() {
       };
     });
 
-    setImages((prev) => {
-      const loadedPaths = new Set(prev.map((image) => image.path));
-      const imagesToAppend = updatedImages.filter((image) => !loadedPaths.has(image.path));
-      return [...prev, ...imagesToAppend];
-    });
+    // Fill in what the read found, matching on path — the cards are already
+    // on screen from the block above.
+    const byPath = new Map(updatedImages.map((image) => [image.path, image]));
+    setImages((prev) => prev.map((image) => byPath.get(image.path) ?? image));
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -393,13 +400,36 @@ function App() {
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
 
-    const files = Array.from(e.dataTransfer.files);
-    const imagePaths = files
-      .filter((file) => /\.(jpg|jpeg|tiff|tif)$/i.test(file.name))
-      .map((file) => window.electronAPI.getPathForFile(file));
+    const dropped = Array.from(e.dataTransfer.files).map((file) =>
+      window.electronAPI.getPathForFile(file)
+    );
+    if (dropped.length === 0) return;
 
-    if (imagePaths.length > 0) {
-      await handleFilesDropped(imagePaths);
+    // The main process expands any folders and works out what is actually
+    // loadable. Dropping a folder used to yield nothing at all, silently.
+    const { files, folders, unsupported } = await window.electronAPI.collectImagePaths(dropped);
+
+    if (files.length > 0) {
+      await handleFilesDropped(files);
+    }
+
+    if (unsupported > 0 || (folders > 0 && files.length === 0)) {
+      const skipped: string[] = [];
+      if (unsupported > 0) {
+        skipped.push(
+          `${unsupported} ${unsupported === 1 ? "file is" : "files are"} not a JPEG or TIFF`
+        );
+      }
+      if (folders > 0 && files.length === 0) {
+        skipped.push(
+          `${folders} ${folders === 1 ? "folder holds" : "folders hold"} no images`
+        );
+      }
+      alert(
+        files.length > 0
+          ? `Added ${files.length} ${files.length === 1 ? "image" : "images"}. Skipped ${skipped.join(" and ")}.`
+          : `Nothing was added — ${skipped.join(" and ")}.`
+      );
     }
   };
 
@@ -514,10 +544,21 @@ function App() {
     const profile = profiles.find((p) => p.id === selectedProfile);
     const results: ProcessingLogEntry[] = [];
 
-    for (const image of images) {
-      if (!image.pendingChanges || Object.keys(image.pendingChanges).length === 0) {
-        continue;
-      }
+    // Decide the batch once, up front. The loop already closed over this
+    // render's array, but saying so plainly means a later edit cannot quietly
+    // join a write that is already running — and it is what the loop should
+    // guarantee, not something to infer from how the closure happens to work.
+    const batch = images.filter(
+      (image): image is ImageFile & { pendingChanges: ExifData } =>
+        image.pendingChanges !== undefined && Object.keys(image.pendingChanges).length > 0
+    );
+
+    for (const image of batch) {
+      setImages((prev) =>
+        prev.map((img) =>
+          img.path === image.path ? { ...img, status: "processing" as const } : img
+        )
+      );
 
       try {
         const writeResult = await window.electronAPI.writeExif(
@@ -541,6 +582,24 @@ function App() {
         results.push(logEntry);
         await window.electronAPI.addLogEntry(logEntry);
 
+        // The file on disk has changed. Read it back, or the sidebar and the
+        // card keep showing what was read at load — which is the state before
+        // the write, and looks like the save undid itself.
+        let refreshed: ExifData | undefined;
+        let refreshedIsScanner: boolean | undefined;
+        if (writeResult.success) {
+          try {
+            const reread = await window.electronAPI.readExif(image.path);
+            if (!("error" in reread)) {
+              refreshed = reread.data;
+              refreshedIsScanner = reread.isScanner;
+            }
+          } catch {
+            // the write succeeded; failing to read it back is not worth
+            // reporting, and the stale values are no worse than before
+          }
+        }
+
         // Update image status
         setImages((prev) =>
           prev.map((img) =>
@@ -549,6 +608,8 @@ function App() {
                   ...img,
                   status: writeResult.success ? "success" : "error",
                   error: writeResult.error,
+                  existingExif: refreshed ?? img.existingExif,
+                  isScanner: refreshedIsScanner ?? img.isScanner,
                   pendingChanges: writeResult.success ? {} : img.pendingChanges,
                 }
               : img
@@ -582,10 +643,25 @@ function App() {
     setProcessingLog((prev) => [...results, ...prev]);
     setIsProcessing(false);
 
-    // If save was triggered by close dialog, close window now
+    const failed = results.filter((entry) => !entry.success);
+
+    // If the save came from the close dialog, only close when it worked.
+    // Closing on failure took the app away before the user could see that
+    // nothing had been saved, leaving the log as the only record.
     if (saveAndCloseRef.current) {
       saveAndCloseRef.current = false;
-      window.electronAPI.forceCloseWindow();
+      if (failed.length === 0) {
+        window.electronAPI.forceCloseWindow();
+      } else {
+        alert(
+          `${failed.length} of ${results.length} ${results.length === 1 ? "image" : "images"} could not be saved, so the window has stayed open.\n\n` +
+            failed
+              .slice(0, 5)
+              .map((entry) => `${entry.filename}: ${entry.error ?? "unknown error"}`)
+              .join("\n") +
+            (failed.length > 5 ? `\n…and ${failed.length - 5} more.` : "")
+        );
+      }
     }
   }, [images, profiles, selectedProfile]);
 
@@ -607,8 +683,13 @@ function App() {
         entry.backupPath
       );
       if (result.success) {
-        // Remove entry from log
-        setProcessingLog((prev) => prev.filter((e) => e.id !== entry.id));
+        // Mark the entry rather than dropping it: the write did happen, and
+        // the panel is the only lasting record that it did.
+        await window.electronAPI.markLogEntryRestored(entry.id);
+        const restoredAt = new Date().toISOString();
+        setProcessingLog((prev) =>
+          prev.map((e) => (e.id === entry.id ? { ...e, restoredAt } : e))
+        );
       } else {
         alert(`Failed to restore backup: ${result.error}`);
       }
@@ -669,14 +750,11 @@ function App() {
       <main className="flex-1 flex flex-col overflow-hidden">
         {currentView === "dropzone" ? (
           <DropZone
-            isDragOver={false}
             isProcessing={isProcessing}
-            results={[]}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onFileSelect={handleFileSelect}
-            onClearResults={() => {}}
           />
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -685,7 +763,8 @@ function App() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleClearImages}
-                  className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 flex items-center gap-1"
+                  disabled={isProcessing}
+                  className="text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   ← Back
                 </button>
@@ -770,6 +849,13 @@ function App() {
       </main>
 
       <Footer
+        disabled={isProcessing}
+        onOpenHistory={
+          currentView === "dropzone" && processingLog.length > 0
+            ? () => setIsLogOpen(true)
+            : undefined
+        }
+        historyCount={processingLog.length}
         profiles={profiles}
         selectedProfile={selectedProfile}
         onAddProfile={() => setIsCreatingProfile(true)}

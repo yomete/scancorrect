@@ -6,10 +6,8 @@ import {
   STANDARD_SHUTTER_SPEEDS,
   STANDARD_FOCAL_LENGTHS,
   STANDARD_EV,
-  FILM_FORMATS,
   formatAperture,
   formatExposureComp,
-  calculate35mmEquivalent,
 } from "../../constants/metadata";
 
 interface ExposureStepProps {
@@ -32,12 +30,6 @@ export function ExposureStep({ data, onChange }: ExposureStepProps) {
   };
 
   // Calculate 35mm equivalent if both focal length and format are selected
-  const selectedFormat = FILM_FORMATS.find((f) => f.name === data.filmFormat);
-  const equivalentFocalLength =
-    data.focalLength && selectedFormat
-      ? calculate35mmEquivalent(data.focalLength, selectedFormat.cropFactor)
-      : null;
-
   return (
     <div className="space-y-5">
       <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -129,27 +121,6 @@ export function ExposureStep({ data, onChange }: ExposureStepProps) {
           </select>
         </div>
 
-        {/* Film Format */}
-        <div>
-          <label className="block mb-1.5 font-medium text-gray-700 dark:text-gray-300 text-sm">
-            Film Format
-          </label>
-          <select
-            value={data.filmFormat ?? ""}
-            onChange={(e) =>
-              handleChange("filmFormat", e.target.value || undefined)
-            }
-            className="w-full p-2.5 px-3 border border-gray-300 dark:border-gray-600 dark:bg-neutral-700 dark:text-gray-200 rounded-md text-sm transition-colors focus:outline-none focus:border-blue-500 bg-white"
-          >
-            <option value="">Select Format</option>
-            {FILM_FORMATS.map((format) => (
-              <option key={format.name} value={format.name}>
-                {format.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
         {/* Exposure Compensation */}
         <div>
           <label className="block mb-1.5 font-medium text-gray-700 dark:text-gray-300 text-sm">
@@ -172,23 +143,7 @@ export function ExposureStep({ data, onChange }: ExposureStepProps) {
         </div>
       </div>
 
-      {/* 35mm Equivalent calculation */}
-      {equivalentFocalLength !== null && (
-        <div className="p-4 bg-gray-50 dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-gray-600">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              35mm Equivalent:
-            </span>
-            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-              {equivalentFocalLength}mm
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Based on {data.focalLength}mm on {data.filmFormat} (crop factor:{" "}
-            {selectedFormat?.cropFactor}x)
-          </p>
-        </div>
-      )}
+
 
       <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/30 rounded-lg border border-amber-100 dark:border-amber-800">
         <p className="text-sm text-amber-800 dark:text-amber-200">

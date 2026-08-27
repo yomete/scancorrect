@@ -87,6 +87,7 @@ export interface WriteResult {
 interface ExtendedTags extends Tags {
   ExposureBiasValue?: number
   Error?: string
+  MIMEType?: string
 }
 
 /**
@@ -190,6 +191,15 @@ export async function readExifData(
         exifData.dateTimeOriginal = `${fullMatch[1]}-${fullMatch[2]}-${fullMatch[3]}T${fullMatch[4]}:${fullMatch[5]}:${fullMatch[6]}`
       }
     }
+  }
+
+  // exiftool identifies the file whatever its name says, so a text file
+  // renamed .jpg comes back as text/plain. Without this it would load looking
+  // exactly like a real scan — the extension check at the drop only sees the
+  // name, and a preview is no help because the OS thumbnail service renders
+  // something for almost any file.
+  if (tags.MIMEType && !String(tags.MIMEType).startsWith('image/')) {
+    throw new Error(`Not an image: this file is ${tags.MIMEType}`)
   }
 
   // exiftool resolves rather than rejecting for a file it cannot make sense of

@@ -1,7 +1,11 @@
 import type { IpcMain, Dialog, BrowserWindow } from 'electron'
 import type Store from 'electron-store' with { 'resolution-mode': 'import' }
 import type { StoreSchema } from '../store'
-import { autoUpdater } from 'electron-updater'
+import * as fs from 'fs'
+import * as path from 'path'
+import type { CollectedPaths } from '../ipc-types'
+
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.tif', '.tiff'])
 import { isUpdateDownloaded } from '../updater'
 
 interface MiscHandlerDeps {
@@ -10,6 +14,8 @@ interface MiscHandlerDeps {
   getMainWindow: () => BrowserWindow | null
   getForceCloseWindow: () => boolean
   setForceCloseWindow: (v: boolean) => void
+  /** Injected rather than imported so this module needs no runtime electron. */
+  quitApp: () => void
   dialog: Dialog
 }
 
@@ -19,6 +25,7 @@ export function registerMiscHandlers({
   getMainWindow,
   getForceCloseWindow: _getForceCloseWindow,
   setForceCloseWindow,
+  quitApp,
   dialog,
 }: MiscHandlerDeps): void {
   ipcMain.handle('show-open-dialog', async (): Promise<string[] | undefined> => {
@@ -33,6 +40,49 @@ export function registerMiscHandlers({
     })
 
     return result.canceled ? undefined : result.filePaths
+  })
+
+  // A drop can contain folders, hidden junk and files the app cannot read.
+  // The renderer cannot tell them apart — it only has names — so work it out
+  // here, where the filesystem is, and report what was left behind.
+  ipcMain.handle('collect-image-paths', async (_, paths: string[]): Promise<CollectedPaths> => {
+    const files: string[] = []
+    let folders = 0
+    let unsupported = 0
+
+    const take = (candidate: string): void => {
+      if (IMAGE_EXTENSIONS.has(path.extname(candidate).toLowerCase())) {
+        files.push(candidate)
+      } else if (!path.basename(candidate).startsWith('.')) {
+        // hidden files are dropped in silently; nobody means to add .DS_Store
+        unsupported++
+      }
+    }
+
+    for (const candidate of paths) {
+      let stat: import('fs').Stats
+      try {
+        stat = await fs.promises.stat(candidate)
+      } catch {
+        unsupported++
+        continue
+      }
+      if (stat.isDirectory()) {
+        folders++
+        try {
+          const entries = await fs.promises.readdir(candidate, { withFileTypes: true })
+          for (const entry of entries) {
+            if (entry.isFile()) take(path.join(candidate, entry.name))
+          }
+        } catch {
+          // an unreadable folder counts as one skipped folder, nothing more
+        }
+      } else {
+        take(candidate)
+      }
+    }
+
+    return { files, folders, unsupported }
   })
 
   ipcMain.handle('force-close-window', () => {
@@ -66,6 +116,11 @@ export function registerMiscHandlers({
 
   ipcMain.handle('install-update-now', (): void => {
     if (!isUpdateDownloaded()) return
-    autoUpdater.quitAndInstall()
+    // Quit rather than calling quitAndInstall straight away. Quitting runs the
+    // unsaved-changes guard on the way out, and autoInstallOnAppQuit is set, so
+    // the update still lands as the app goes down. Cancelling at the guard
+    // cancels the update too, which is what the user just asked for by saying
+    // they had work to keep.
+    quitApp()
   })
 }

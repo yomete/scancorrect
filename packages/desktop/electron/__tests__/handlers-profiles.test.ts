@@ -107,3 +107,34 @@ describe('registerProfileHandlers', () => {
     })
   })
 })
+
+describe('mark-log-entry-restored', () => {
+  it('marks the entry and leaves it in the log', async () => {
+    const ipc = makeFakeIpc()
+    const store = makeStore({
+      processingLog: [
+        { id: 'a', filename: 'a.jpg', success: true, backupPath: '/b/a.jpg' },
+        { id: 'b', filename: 'b.jpg', success: true, backupPath: '/b/b.jpg' },
+      ],
+    })
+    registerProfileHandlers({ ipcMain: ipc.ipcMain as never, getStore: (() => store) as never })
+
+    ipc.invoke('mark-log-entry-restored', 'a')
+    const log = ipc.invoke('get-processing-log') as Array<Record<string, unknown>>
+
+    // the entry survives — a restore is part of the record, not a deletion
+    expect(log).toHaveLength(2)
+    expect(log.find((e) => e.id === 'a')!.restoredAt).toEqual(expect.any(String))
+    expect(log.find((e) => e.id === 'b')!.restoredAt).toBeUndefined()
+  })
+
+  it('does nothing for an id that is not there', async () => {
+    const ipc = makeFakeIpc()
+    const store = makeStore({ processingLog: [{ id: 'a', filename: 'a.jpg', success: true }] })
+    registerProfileHandlers({ ipcMain: ipc.ipcMain as never, getStore: (() => store) as never })
+
+    expect(() => ipc.invoke('mark-log-entry-restored', 'nope')).not.toThrow()
+    const log = ipc.invoke('get-processing-log') as unknown[]
+    expect(log).toHaveLength(1)
+  })
+})

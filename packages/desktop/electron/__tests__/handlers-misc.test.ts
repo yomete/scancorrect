@@ -1,4 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
+import * as fs from 'fs'
+import * as os from 'os'
+import * as nodePath from 'path'
 
 vi.mock('../updater', () => ({
   isUpdateDownloaded: vi.fn(),
@@ -14,6 +17,7 @@ import { autoUpdater } from 'electron-updater'
 
 const mockIsUpdateDownloaded = vi.mocked(isUpdateDownloaded)
 const mockQuitAndInstall = vi.mocked(autoUpdater.quitAndInstall)
+const mockQuitApp = vi.fn()
 
 function makeFakeIpc() {
   const handlers = new Map<string, (...args: unknown[]) => unknown>()
@@ -39,6 +43,65 @@ function makeStore(initial: Record<string, unknown> = {}) {
   }
 }
 
+describe('collect-image-paths', () => {
+  let ipc: ReturnType<typeof makeFakeIpc>
+  let dir: string
+
+  beforeEach(() => {
+    ipc = makeFakeIpc()
+    registerMiscHandlers({
+      ipcMain: ipc.ipcMain as never,
+      getStore: (() => makeStore()) as never,
+      getMainWindow: () => null,
+      getForceCloseWindow: () => false,
+      setForceCloseWindow: () => {},
+      quitApp: () => {},
+      dialog: {} as never,
+    })
+    dir = fs.mkdtempSync(nodePath.join(os.tmpdir(), 'scancorrect-collect-'))
+  })
+
+  afterAll(() => { /* temp dirs are left to the OS */ })
+
+  const write = (name: string, body = 'x') => {
+    const p = nodePath.join(dir, name)
+    fs.mkdirSync(nodePath.dirname(p), { recursive: true })
+    fs.writeFileSync(p, body)
+    return p
+  }
+
+  it('expands a dropped folder into the images inside it', async () => {
+    write('roll/a.jpg'); write('roll/b.tif'); write('roll/notes.txt')
+    const result = await ipc.invoke('collect-image-paths', [nodePath.join(dir, 'roll')]) as
+      { files: string[]; folders: number; unsupported: number }
+
+    expect(result.files).toHaveLength(2)
+    expect(result.files.map((f) => nodePath.basename(f)).sort()).toEqual(['a.jpg', 'b.tif'])
+    expect(result.folders).toBe(1)
+    expect(result.unsupported).toBe(1)
+  })
+
+  it('counts unsupported files and ignores hidden ones', async () => {
+    const jpg = write('scan.jpg')
+    const raw = write('scan.NEF')
+    const hidden = write('.DS_Store')
+    const result = await ipc.invoke('collect-image-paths', [jpg, raw, hidden]) as
+      { files: string[]; folders: number; unsupported: number }
+
+    expect(result.files).toEqual([jpg])
+    expect(result.unsupported).toBe(1)   // the NEF; never the hidden file
+    expect(result.folders).toBe(0)
+  })
+
+  it('reports a path that does not exist as unsupported rather than throwing', async () => {
+    const result = await ipc.invoke('collect-image-paths', [nodePath.join(dir, 'gone.jpg')]) as
+      { files: string[]; unsupported: number }
+
+    expect(result.files).toEqual([])
+    expect(result.unsupported).toBe(1)
+  })
+})
+
 describe('registerMiscHandlers', () => {
   let ipc: ReturnType<typeof makeFakeIpc>
   let store: ReturnType<typeof makeStore>
@@ -57,6 +120,7 @@ describe('registerMiscHandlers', () => {
       getMainWindow: () => null,
       getForceCloseWindow: () => forceCloseValue,
       setForceCloseWindow: (v) => { forceCloseValue = v },
+      quitApp: mockQuitApp,
       dialog: {
         showOpenDialog: vi.fn().mockResolvedValue({ canceled: true, filePaths: [] }),
       } as any,
@@ -136,18 +200,22 @@ describe('registerMiscHandlers', () => {
   })
 
   describe('install-update-now', () => {
-    it('does not install when an update has not been downloaded', async () => {
+    it('does nothing when an update has not been downloaded', async () => {
       await ipc.invoke('install-update-now')
 
+      expect(mockQuitApp).not.toHaveBeenCalled()
       expect(mockQuitAndInstall).not.toHaveBeenCalled()
     })
 
-    it('installs when an update has been downloaded', async () => {
+    it('quits rather than installing directly, so the unsaved-changes guard runs', async () => {
       mockIsUpdateDownloaded.mockReturnValue(true)
 
       await ipc.invoke('install-update-now')
 
-      expect(mockQuitAndInstall).toHaveBeenCalled()
+      expect(mockQuitApp).toHaveBeenCalled()
+      // quitAndInstall would skip the guard; autoInstallOnAppQuit lands the
+      // update on the way down instead
+      expect(mockQuitAndInstall).not.toHaveBeenCalled()
     })
   })
 })

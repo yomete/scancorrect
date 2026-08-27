@@ -267,6 +267,15 @@ export function LogEntry({ entry, onUndo, canUndo }: LogEntryProps) {
             )}
 
             {/* Undo button */}
+            {entry.restoredAt && (
+              <span
+                className="text-xs text-gray-500 dark:text-gray-400 italic px-2"
+                title={`Restored from backup on ${new Date(entry.restoredAt).toLocaleString()}`}
+              >
+                Restored
+              </span>
+            )}
+
             {canUndo && entry.success && (
               <button
                 onClick={onUndo}
